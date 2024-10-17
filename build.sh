@@ -1,1 +1,1 @@
-pip install -r requirements.txtgo
+pip install -r requirements.txt
