@@ -24,6 +24,31 @@ if uploaded_file is not None:
         try:
             upload_csv_to_postgres(data, engine)
             st.success(f"Data uploaded successfully!")
+            show_chatbox = True
         except Exception as e:
             st.error(f"An error occurred: {e}")
-        st.write("Preview:", data.head())
+        #st.write("Preview:", data.head())
+        
+st.title('Chat')
+
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message['role']):
+        st.markdown(message['content'])
+
+# User input form
+user_input = st.chat_input("You:", key="input")
+
+# When user presses Enter
+if user_input:
+    # Append user message to chat history
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    
+    response = f'{user_input}'
+    with st.chat_message('bot'):
+        st.markdown(response)
+
+    st.session_state.messages.append({'role': 'bot', 'content': response})
