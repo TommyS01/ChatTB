@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
-from postgres import upload_csv_to_postgres
+from upload import send_to_postgres, send_to_mongo
 
 # DB access
 load_dotenv()
@@ -26,7 +26,7 @@ if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
     if st.button("Upload to Database"):
         try:
-            upload_csv_to_postgres(data, engine)
+            send_to_postgres(data, engine)
             st.success(f"Data uploaded successfully!")
             show_chatbox = True
         except Exception as e:
@@ -53,7 +53,7 @@ if user_input:
     with st.chat_message('user'):
         st.markdown(user_input)
     
-    response = f'Echo: {user_input}'
+    response = f'Echo: {user_input}' # replace is sql query generation
     st.session_state.messages.append({"role": "assistant", "content": response})
     with st.chat_message('assistant'):
         st.markdown(response)
