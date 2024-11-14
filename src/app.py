@@ -5,18 +5,22 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 from postgres import upload_csv_to_postgres
 
+# DB access
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# SQL Engine
 @st.cache_resource
 def get_engine():
     return create_engine(DATABASE_URL)
 
-st.title("ChatTB")
-
 engine = get_engine()
 
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+st.title("ChatTB")
+
+# File uplaod
+uploaded_file = st.file_uploader("Choose a file", type=["csv", "json"])
 
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
@@ -27,8 +31,8 @@ if uploaded_file is not None:
             show_chatbox = True
         except Exception as e:
             st.error(f"An error occurred: {e}")
-        #st.write("Preview:", data.head())
-        
+
+# Chat    
 st.title('Chat')
 
 # Initialize chat history
@@ -46,9 +50,11 @@ user_input = st.chat_input("You:", key="input")
 if user_input:
     # Append user message to chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message('user'):
+        st.markdown(user_input)
     
-    response = f'{user_input}'
-    with st.chat_message('bot'):
+    response = f'Echo: {user_input}'
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    with st.chat_message('assistant'):
         st.markdown(response)
 
-    st.session_state.messages.append({'role': 'bot', 'content': response})
