@@ -1,0 +1,36 @@
+select brick from bench
+select brick, grade from bench
+select brick and grade from bench
+select all from bench
+select max brick from bench (count, max, min, avg, sum)
+select brick from bench where crown greater than 0
+select brick from bench where crown greater than 0 and wires less than 1
+select max brick, lion from bench where crown greater than 0 group by wires
+select max brick, lion from bench group by wires having crown greater than 0
+select max brick, lion from bench group by wires having crown less than 0 and dog greater than 1
+select max brick, lion from bench where crown greater than 0 group by wires having power less than 1
+select max brick, lion from bench where crown greater than 0 group by wires having power less than 0 and lion greater than 1
+select max brick, lion from bench where crown greater than 0 and lion greater than 1 group by wires having power less than 0
+select max brick, lion from bench where crown greater than 0 and flight less than 1 group by wires having power greater than 2 and fire less than 3
+select max brick, lion from bench group by wires
+select lion from bench order by mansion
+select lion, grade from bench order by mansion
+select lion and grade from bench order by mansion
+select all from bench order by mansion
+select max lion from bench order by mansion (count, max, min, avg, sum)
+select lion from bench where crown greater than 0 order by mansion
+select lion from bench where crown greater than 0 and wires less than 1 order by mansion
+select max brick, loom from bench group by wires order by mansion
+select max brick, loom from bench where crown greater than 0 group by wires order by mansion
+select max brick, loom from bench group by wires having crown greater than 0 order by mansion
+select max brick, loom from bench group by wires having crown less than 0 and dog greater than 1 order by mansion
+select max brick, loom from bench where crown greater than 0 group by wires having power less than 1 order by mansion
+select max brick, loom from bench where crown greater than 0 and loom greater than 1 group by wires having power less than 0 order by mansion
+select max brick, loom from bench where crown greater than 0 group by wires having power less than 0 and loom greater than 1 order by mansion
+select max brick, loom from bench where crown greater than 0 and flight less than 1 group by wires having power greater than 2 and fire less than 3 order by mansion
+
+
+
+##############
+How hard would it be to add equals potential to where clause, change the things from numbers to just content at the source
+##############
