@@ -1,8 +1,8 @@
 import os
-import streamlit as st
-import pandas as pd
-from sqlalchemy import create_engine
 from dotenv import load_dotenv
+import streamlit as st
+from sqlalchemy import create_engine
+
 from upload import send_to_postgres, send_to_mongo
 
 # DB access
@@ -23,10 +23,9 @@ st.title("ChatTB")
 uploaded_file = st.file_uploader("Choose a file", type=["csv", "json"])
 
 if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
     if st.button("Upload to Database"):
         try:
-            send_to_postgres(data, engine)
+            send_to_postgres(uploaded_file, engine)
             st.success(f"Data uploaded successfully!")
             show_chatbox = True
         except Exception as e:
