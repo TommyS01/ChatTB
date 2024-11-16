@@ -19,8 +19,15 @@ engine = get_engine()
 
 st.title("ChatTB")
 
+# DB type
+db = st.select_slider("Select a DB type to query", options=["PostgreSQL", "MongoDB"], value="PostgreSQL")
+
 # File uplaod
-uploaded_file = st.file_uploader("Choose a file", type=["csv", "json"])
+if db == 'PostgreSQL':
+    uploaded_file = st.file_uploader("Choose a file", type="csv")
+else:
+    uploaded_file = st.file_uploader("Choose a file", type="json")
+
 
 if uploaded_file is not None:
     if st.button("Upload to Database"):
@@ -32,7 +39,7 @@ if uploaded_file is not None:
             st.error(f"An error occurred: {e}")
 
 # Chat    
-st.title('Chat')
+st.subheader('Chat')
 
 # Initialize chat history
 if "messages" not in st.session_state:
