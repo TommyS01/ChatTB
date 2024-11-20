@@ -1,7 +1,7 @@
 import os
 import nltk
 import re
-# nltk.download('averaged_perceptron_tagger_eng')
+
 from nltk import word_tokenize, pos_tag
 
 from nltk.corpus import stopwords
@@ -11,6 +11,7 @@ from numpy.ma.core import equal
 
 nltk.download('punkt_tab')
 nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger_eng')
 
 
 stopWords = set(stopwords.words('english'))
