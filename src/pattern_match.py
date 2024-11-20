@@ -9,7 +9,7 @@ from numpy.ma.core import equal
 
 # from nltk.misc.sort import selection
 
-#nltk.download('stopwords')
+nltk.download('stopwords')
 nltk.data.path.append(os.path.expanduser('~/.nltk_data'))
 
 stopWords = set(stopwords.words('english'))
