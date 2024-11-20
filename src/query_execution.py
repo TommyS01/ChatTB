@@ -1,14 +1,19 @@
 import pandas as pd
 import json
 from sqlalchemy import inspect, text
+from bson import json_util
 
 # Upload functions
 def send_to_postgres(uploaded_file, engine):
     data = pd.read_csv(uploaded_file)
     data.to_sql(name=uploaded_file.name.split('.')[0], con=engine, if_exists='replace', index=False)
 
-def send_to_mongo(data, engine):
-    pass
+def send_to_mongo(uploaded_file, client):
+    
+    mongodb = client['db']
+    collection = mongodb[uploaded_file.name.split('.')[0]]
+    data = json_util.loads(uploaded_file.read())
+    collection.insert_many(data)
 
 # Show tables
 def show_sql_tables(engine):
@@ -16,10 +21,8 @@ def show_sql_tables(engine):
     return inspector.get_table_names()
 
 
-def show_mongo_collections():
-    # TODO show mongo tables
-    pass
-
+def show_mongo_collections(client):
+    return client['db'].list_collection_names()
 # Clear database
 
 

@@ -32,7 +32,7 @@ orderingList = descList + ascList
 
 db = "mongo"
 
-def translate_query(sentence, db):
+def translate_query(sentence, db, table=""):
     def targeter (targets, maxList, minList, avgList, sumList, countList):
         for i in targets:
             if i in maxList:
@@ -231,7 +231,7 @@ def translate_query(sentence, db):
         else:
             return ""
 
-    table = ""
+    #table = ""
 
     # Main loop
     selections = ""
@@ -308,7 +308,8 @@ def translate_query(sentence, db):
             print("1")
             selections = selector(filteredClauses)
             if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             statement = "SELECT " + selections + " FROM " + table
         elif len(filteredClauses) == 2:
             print("2")
@@ -316,7 +317,8 @@ def translate_query(sentence, db):
                 selections = selector(filteredClauses)
                 table = targets[-1]
                 if table == "":
-                    table = input("What table are you querying from? ")
+                    #table = input("What table are you querying from? ")
+                    pass
                 elif conditions[0] == 'from':
                     table = filteredClauses[1][0]
                 statement = "SELECT " + selections + " FROM " + table
@@ -326,7 +328,8 @@ def translate_query(sentence, db):
                 if comparisons:
                     selections = selector(filteredClauses)
                     if table == "":
-                        table = input("What table are you querying from? ")
+                        #table = input("What table are you querying from? ")
+                        pass
                     elif conditions[0] == 'from':
                         table = filteredClauses[1][0]
                     comparison = comparisonConverter(comparisons[0])
@@ -338,7 +341,8 @@ def translate_query(sentence, db):
                 0] == 'whenever' or conditions[0] == 'if'):
                 selections = selector(filteredClauses)
                 if table == "":
-                    table = input("What table are you querying from? ")
+                    #table = input("What table are you querying from? ")
+                    pass
                 elif conditions[0] == 'from':
                     table = filteredClauses[1][0]
             else:
@@ -348,7 +352,8 @@ def translate_query(sentence, db):
             print("3")
             selections = selector(filteredClauses)
             if table == "" and "from" not in conditions:
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             elif conditions[0] == 'from':
                 # print(filteredClauses)
                 table = filteredClauses[1][0]
@@ -375,7 +380,8 @@ def translate_query(sentence, db):
             print("4")
             selections = selector(filteredClauses)
             if table == "" and "from" not in conditions:
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             elif conditions[0] == 'from':
                 print(filteredClauses)
                 table = filteredClauses[1][0]
@@ -458,7 +464,8 @@ def translate_query(sentence, db):
             selections = selector(filteredClauses)
             table = filteredClauses[1][0]
             if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             statement = "SELECT " + selections + " FROM " + table + " ORDER BY " + filteredClauses[2][0] + order
         elif len(filteredClauses) == 4:
             print("2")
@@ -466,7 +473,8 @@ def translate_query(sentence, db):
                 selections = selector(filteredClauses)
                 table = filteredClauses[1][0]
                 if table == "":
-                    table = input("What table are you querying from? ")
+                    #table = input("What table are you querying from? ")
+                    pass
                 elif conditions[0] == 'from':
                     table = filteredClauses[1][0]
                 comparison = comparisonConverter(comparisons[0])
@@ -476,7 +484,8 @@ def translate_query(sentence, db):
                 selections = selector(filteredClauses)
                 table = filteredClauses[1][0]
                 if table == "":
-                    table = input("What table are you querying from? ")
+                    #table = input("What table are you querying from? ")
+                    pass
                 elif conditions[0] == 'from':
                     table = filteredClauses[1][0]
                 comparison1 = comparisonConverter(comparisons[0])
@@ -496,7 +505,8 @@ def translate_query(sentence, db):
             print("3")
             selections = selector(filteredClauses)
             if table == "" and "from" not in conditions:
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             elif conditions[0] == 'from':
                 print(filteredClauses)
                 table = filteredClauses[1][0]
@@ -537,7 +547,8 @@ def translate_query(sentence, db):
             print("4")
             selections = selector(filteredClauses)
             if table == "" and "from" not in conditions:
-                table = input("What table are you querying from? ")
+                #table = input("What table are you querying from? ")
+                pass
             elif conditions[0] == 'from':
                 print(filteredClauses)
                 table = filteredClauses[1][0]
