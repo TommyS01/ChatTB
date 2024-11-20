@@ -51,7 +51,6 @@ if uploaded_file is not None:
 if db == 'PostgreSQL':
     st.write(f'Existing tables: {show_sql_tables(sql_engine)}')
 else:
-    # TODO: List mongo tables
     st.write(f'Existing collections: {show_mongo_collections(mongo_client)}')
 
 # Chat
@@ -89,7 +88,7 @@ if user_input:
     if db_in == '':
         response = execute_sql(query, sql_engine)
     else:
-        response = execute_mongo(query)
+        response = execute_mongo(query, mongo_client)
     st.session_state.messages.append({"role": "assistant", "content": response})
     with st.chat_message('assistant'):
         st.text(response)
