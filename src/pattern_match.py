@@ -1,3 +1,4 @@
+import os
 import nltk
 import re
 # nltk.download('averaged_perceptron_tagger_eng')
@@ -8,7 +9,9 @@ from numpy.ma.core import equal
 
 # from nltk.misc.sort import selection
 
-# nltk.download('stopwords')
+#nltk.download('stopwords')
+nltk.data.path.append(os.path.expanduser('~/.nltk_data'))
+
 stopWords = set(stopwords.words('english'))
 excludeWords = ["all", "between"]
 customStopWords = set([word for word in stopWords if word not in excludeWords])
