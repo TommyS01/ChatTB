@@ -4,18 +4,24 @@ import streamlit as st
 from sqlalchemy import create_engine
 
 from upload import send_to_postgres, send_to_mongo
+from pattern_match import translate_query
 
 # DB access
 load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+SQL_URL = os.getenv("DATABASE_URL")
 
 # SQL Engine
 @st.cache_resource
-def get_engine():
-    return create_engine(DATABASE_URL)
+def get_sql_engine():
+    return create_engine(SQL_URL)
 
-engine = get_engine()
+# Mongo Engine
+@st.cache_resource
+def get_mongo_engine():
+    return ...
 
+sql_engine = get_sql_engine()
+mongo_engine = get_mongo_engine()
 
 st.title("ChatTB")
 
@@ -32,13 +38,17 @@ else:
 if uploaded_file is not None:
     if st.button("Upload to Database"):
         try:
-            send_to_postgres(uploaded_file, engine)
+            if db == 'PostgreSQL':
+                send_to_postgres(uploaded_file, sql_engine)
+            else:
+                send_to_mongo(uploaded_file, mongo_engine)
             st.success(f"Data uploaded successfully!")
-            show_chatbox = True
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
-# Chat    
+# TODO: List current tables
+
+# Chat
 st.subheader('Chat')
 
 # Initialize chat history
@@ -57,10 +67,14 @@ if user_input:
     # Append user message to chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message('user'):
-        st.markdown(user_input)
+        st.text(user_input)
     
-    response = f'Echo: {user_input}' # replace is sql query generation
+    # Set correct db type
+    db_in = 'mongo' if db == 'MongoDB' else ''
+
+    response = f'{translate_query(user_input, db=db_in)}' 
+    # TODO: show query results
     st.session_state.messages.append({"role": "assistant", "content": response})
     with st.chat_message('assistant'):
-        st.markdown(response)
+        st.text(response)
 
