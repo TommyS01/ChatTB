@@ -748,4 +748,4 @@ def translate_query(sentence, db):
         print(mongoClauses)
         return mongoStatement
 
-    return statement
+    return statement + ';'

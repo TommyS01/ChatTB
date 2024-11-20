@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import streamlit as st
 from sqlalchemy import create_engine
 
-from upload import send_to_postgres, send_to_mongo
+from query_execution import *
 from pattern_match import translate_query
 
 # DB access
@@ -17,23 +17,22 @@ def get_sql_engine():
 
 # Mongo Engine
 @st.cache_resource
-def get_mongo_engine():
+def get_mongo_client():
     return ...
 
 sql_engine = get_sql_engine()
-mongo_engine = get_mongo_engine()
+mongo_engine = get_mongo_client()
 
 st.title("ChatTB")
 
 # DB type
 db = st.select_slider("Select a DB type to query", options=["PostgreSQL", "MongoDB"], value="PostgreSQL")
 
-# File uplaod
+# File upload
 if db == 'PostgreSQL':
     uploaded_file = st.file_uploader("Choose a file", type="csv")
 else:
     uploaded_file = st.file_uploader("Choose a file", type="json")
-
 
 if uploaded_file is not None:
     if st.button("Upload to Database"):
@@ -46,7 +45,12 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
-# TODO: List current tables
+
+if db == 'PostgreSQL':
+    st.write(f'Existing tables: {show_sql_tables(sql_engine)}')
+else:
+    # TODO: List mongo tables
+    st.write(f'Existing collections: {show_mongo_collections()}')
 
 # Chat
 st.subheader('Chat')
@@ -72,7 +76,12 @@ if user_input:
     # Set correct db type
     db_in = 'mongo' if db == 'MongoDB' else ''
 
-    response = f'{translate_query(user_input, db=db_in)}' 
+    query = translate_query(user_input, db=db_in)
+    response = f'{query}'
+    if db_in == '':
+        response = response + '\n' + '\n'.join(execute_sql(query, sql_engine))
+    else:
+        execute_mongo(query)
     # TODO: show query results
     st.session_state.messages.append({"role": "assistant", "content": response})
     with st.chat_message('assistant'):
