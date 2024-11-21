@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 import streamlit as st
 from sqlalchemy import create_engine
 from pymongo import MongoClient
@@ -8,9 +7,9 @@ from query_execution import *
 from pattern_match import translate_query
 
 # DB access
-load_dotenv()
-SQL_URL = os.getenv("DATABASE_URL")
-MONGO_URL = os.getenv("MONGO_URL")
+
+SQL_URL = st.secrets["DATABASE_URL"]
+MONGO_URL = st.secrets["MONGO_URL"]
 
 # SQL Engine
 @st.cache_resource
