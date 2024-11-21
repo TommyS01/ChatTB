@@ -1,6 +1,5 @@
 .env
-src/__pycache__
+__pycache__
 data
 .DS_Store
-src/.DS_Store
 .streamlit

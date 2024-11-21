@@ -9,9 +9,9 @@ from numpy.ma.core import equal
 
 # from nltk.misc.sort import selection
 
-nltk.download('punkt_tab')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger_eng')
+#nltk.download('punkt_tab')
+#nltk.download('stopwords')
+#nltk.download('averaged_perceptron_tagger_eng')
 
 
 stopWords = set(stopwords.words('english'))
