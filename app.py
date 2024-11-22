@@ -80,7 +80,25 @@ if user_input:
     # Set correct db type
     db_in = 'mongo' if db == 'MongoDB' else ''
 
-    query = translate_query(user_input, db=db_in)
+    # TODO: Check if example query
+    if "example query" in user_input:
+        if user_input == 'example query':
+            if db_in == '':
+                query = example_sql(engine=sql_engine)
+            else: # TODO: general mongo example
+                #query = example_mongo()
+                pass
+        else:
+            construct = re.findall("example query with (.+)", user_input)[0]
+            construct = construct.upper().strip()
+            if db_in == '':
+                query = example_sql(engine=sql_engine, construct=construct)
+            else: #mongo example with construct
+                #query = example_mongo(construct=construct)
+                pass
+    else:
+        query = translate_query(user_input, db=db_in)
+
     # Print query
     response = f'Query: {query}'
     st.session_state.messages.append({"role": "assistant", "content": response})

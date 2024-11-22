@@ -74,7 +74,8 @@ def execute_mongo(statement, client):
 
 
 # Example query
-def example_sql(table, engine, construct=None):
+def example_sql(engine, construct=None):
+    table = random.choice(show_sql_tables(engine))
     # Split column types
     inspector = inspect(engine)
     columns = inspector.get_columns(table)
