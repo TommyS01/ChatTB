@@ -22,7 +22,7 @@ extraWords = ["broken", "return", "show", "select", "find", "total", ",", ".", "
 
 greaterList = ['more', "greater", "faster", "taller", "higher", ">"]
 lesserList = ["less", "smaller", "cheaper", "lower", "slower", "shorter", "<", "fewer", "lesser"]
-equalList = ['=', 'equal', 'matching']
+equalList = ['=', 'equal', 'matching', 'equals']
 
 maxList = ['max', 'maximum', 'highest', 'tallest', 'greatest', 'most', 'fastest', 'maximal']
 minList = ['min', 'minimum', 'least', 'smallest', 'cheapest', 'lowest', 'slowest', 'shortest', 'fewest', 'minimal']

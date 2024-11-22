@@ -1,6 +1,7 @@
 import pandas as pd
 import json
-from sqlalchemy import inspect, text
+import random
+from sqlalchemy import inspect, text, TEXT
 from bson import json_util
 import re
 
@@ -70,3 +71,65 @@ def execute_mongo(statement, client):
             outputs.append(doc)
 
     return outputs
+
+
+# Example query
+def example_sql(table, engine, construct=None):
+    # Split column types
+    inspector = inspect(engine)
+    columns = inspector.get_columns(table)
+    all_cols = []
+    string_cols = []
+    numeric_cols = []
+    for c in columns:
+        if isinstance(c['type'], TEXT):
+            string_cols.append(c['name'])
+        else:
+            numeric_cols.append(c['name'])
+        all_cols.append(c['name'])
+
+    sql_fields = {
+        'SELECT': None,
+        'FROM': table,
+        'WHERE': None,
+        'GROUP BY': None,
+        #'HAVING': None,
+        'ORDER BY': None
+    }
+    index = random.choice(all_cols)
+    agg = random.choice(['MAX', 'MIN'])
+    condition = random.choice(numeric_cols)
+    operator = random.choice(['<', '>', '!=', '=', '<=', '>='])
+    val = random.randrange(0,11)
+    direction = random.choice(['DESC', 'ASC'])
+
+    if construct != 'WHERE':
+        sql_fields['WHERE'] = random.choice([f'{condition} {operator} {val}', None])
+    else:
+        sql_fields['WHERE'] = f'{condition} {operator} {val}'
+
+    if construct != 'GROUP BY':
+        sql_fields['GROUP BY'] = random.choice([index, None])
+    else:
+        sql_fields['GROUP BY'] = index
+
+    if construct != 'ORDER BY':
+        sql_fields['ORDER BY'] = random.choice([f'{index} {direction}', None])
+    else:
+        sql_fields['ORDER BY'] = f'{index} {direction}'
+
+    if sql_fields['GROUP BY'] is not None:
+        sql_fields['SELECT'] = f'{index}, {agg}({condition})'
+    else:
+        sql_fields['SELECT'] = f'{index} {condition}'
+    
+    output_string = ''
+    for s in ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY']:
+        if sql_fields[s] is not None:
+            output_string += f'{s} {sql_fields[s]} '
+    output_string = output_string.strip()
+
+    return output_string
+
+def example_mongo():
+    return
