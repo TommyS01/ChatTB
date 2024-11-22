@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+import pandas as pd
 from sqlalchemy import create_engine
 from pymongo import MongoClient
 
@@ -61,7 +62,10 @@ if "messages" not in st.session_state:
 
 for message in st.session_state.messages:
     with st.chat_message(message['role']):
-        st.markdown(message['content'])
+        if isinstance(message['content'], pd.DataFrame):
+            st.table(message['content'])
+        else:
+            st.markdown(message['content'])
 
 # User input form
 user_input = st.chat_input("You:", key="input")
@@ -85,10 +89,16 @@ if user_input:
 
     # Print results
     if db_in == '':
-        response = execute_sql(query, sql_engine)
+        response, columns = execute_sql(query, sql_engine)
+        data = pd.DataFrame(response, columns=columns)
+        response = data
     else:
         response = execute_mongo(query, mongo_client)
     st.session_state.messages.append({"role": "assistant", "content": response})
+    
     with st.chat_message('assistant'):
-        st.text(response)
+        if isinstance(response, pd.DataFrame):
+            st.table(response)
+        else:
+            st.text(response)
 
