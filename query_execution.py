@@ -32,9 +32,10 @@ def execute_sql(query, engine):
     rows = []
     with engine.connect() as conn:
         result = conn.execute(query)
+        columns = result.keys()
         for row in result:
             rows.append(row)
-    return rows
+    return rows, columns
 
 def execute_mongo(statement, client):
     outputs = []
@@ -69,4 +70,3 @@ def execute_mongo(statement, client):
             outputs.append(doc)
 
     return outputs
-
