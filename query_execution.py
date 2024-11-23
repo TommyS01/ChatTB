@@ -24,9 +24,6 @@ def show_sql_tables(engine):
 def show_mongo_collections(client):
     return client['db'].list_collection_names()
 
-# Clear database
-# TODO
-
 # Execute queries
 def execute_sql(query, engine):
     query = text(query)
@@ -74,8 +71,7 @@ def execute_mongo(statement, client):
 
 
 # Example query
-def example_sql(engine, construct=None):
-    table = random.choice(show_sql_tables(engine))
+def example_sql(engine, table, construct=None):
     # Split column types
     inspector = inspect(engine)
     columns = inspector.get_columns(table)
@@ -132,5 +128,52 @@ def example_sql(engine, construct=None):
 
     return output_string
 
-def example_mongo():
-    return
+def example_mongo(client, table, construct=None):
+    db = client['db']
+    collection = db[table]
+    sample = collection.find_one()
+    all_keys = sample.keys()
+    keys = [k for k in all_keys if not isinstance(sample[k], list) and not isinstance(sample[k], dict)]
+
+    index = random.choice(keys)
+    agg = random.choice(['$max', '$min'])
+    condition = random.choice(keys)
+    operator = random.choice(['$gt', '$lt', '$eq', '$ne', '$gte', '$lte'])
+    val = random.randrange(0, 11)
+    direction = random.choice([0, 1])
+
+    mongo_query = {
+        'MATCH': None,
+        'GROUP': None,
+        'PROJECT': {index: 1},
+        'SORT': None
+    }
+
+    if construct != 'MATCH':
+        mongo_query['MATCH'] = random.choice([{'$match': {condition: {operator: val}}}, None])
+    else:
+        mongo_query['MATCH'] = {'$match': {condition: {operator: val}}}
+
+    if construct != 'GROUP':
+        mongo_query['GROUP'] = random.choice([{'$group': {'_id': f'${index}', 'agg': {agg: f'${condition}'}}}, None])
+    else:
+        mongo_query['GROUP'] = {'$group': {'_id': f'${index}', 'agg': {agg: f'${condition}'}}}
+
+    if mongo_query['GROUP'] is not None:
+        mongo_query['PROJECT'] = {'$project': {'_id': 1, 'agg': 1}}
+    else:
+        mongo_query['PROJECT'] = {'$project': {index: 1}}
+
+    if mongo_query['GROUP'] is not None:
+        sort_field = random.choice(['_id', 'agg'])
+        if construct != 'SORT':
+            mongo_query['SORT'] = random.choice([{'$sort': {sort_field: direction}}, None])
+        else:
+            mongo_query['SORT'] = {'$sort': {sort_field: direction}}
+    
+    pipeline = []
+    for q in ['MATCH', 'GROUP', 'PROJECT', 'SORT']:
+        if mongo_query[q] is not None:
+            pipeline.append(mongo_query[q])
+
+    return f'db.{table}.aggregate({pipeline})'.replace("'", '"')

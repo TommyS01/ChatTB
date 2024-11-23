@@ -82,20 +82,20 @@ if user_input:
 
     # TODO: Check if example query
     if "example query" in user_input:
-        if user_input == 'example query':
+        table = re.findall('from (.+)', user_input)[0]
+        if 'with ' not in user_input:
             if db_in == '':
-                query = example_sql(engine=sql_engine)
-            else: # TODO: general mongo example
-                #query = example_mongo()
+                query = example_sql(engine=sql_engine, table=table)
+            else:
+                query = example_mongo(client=mongo_client, table=table)
                 pass
         else:
-            construct = re.findall("example query with (.+)", user_input)[0]
+            construct = re.findall("example query with (.+) from", user_input)[0]
             construct = construct.upper().strip()
             if db_in == '':
-                query = example_sql(engine=sql_engine, construct=construct)
-            else: #mongo example with construct
-                #query = example_mongo(construct=construct)
-                pass
+                query = example_sql(engine=sql_engine, table=table, construct=construct)
+            else:
+                query = example_mongo(client=mongo_client, table=table, construct=construct)
     else:
         query = translate_query(user_input, db=db_in)
 
