@@ -126,6 +126,46 @@ def translate_query(sentence, db, table=""):
         elif input in ascList:
             return " ASC"
 
+    def joinWorder(clause):
+        if "right" in clause:
+            joinWord = " RIGHT JOIN "
+        elif "left" in clause:
+            joinWord = " LEFT JOIN "
+        elif "inner" in clause:
+            joinWord = " INNER JOIN "
+        elif "outer" in clause:
+            joinWord = " FULL OUTER JOIN "
+        else:
+            joinWord = " JOIN "
+
+        return joinWord
+
+    def mongoJoinSplitter(statement):
+        clauses = {
+            "SELECT": [],
+            "FROM": [],
+            "JOIN": [],
+            "WHERE": [],
+            "ORDER BY": []
+        }
+
+        # Define regular expressions for each clause
+        clause_patterns = {
+            "SELECT": r"SELECT (.+?) FROM",
+            "FROM": r"FROM (.+?)(?: RIGHT| LEFT| INNER| FULL| OUTER| JOIN|$)",
+            "JOIN": r"JOIN (.+?)(?: WHERE| ORDER BY|$)",
+            "WHERE": r"WHERE (.+?)(?: ORDER BY|$)",
+            "ORDER BY": r"ORDER BY (.+?)$"
+        }
+
+        for clause_name, pattern in clause_patterns.items():
+            match = re.search(pattern, statement, re.IGNORECASE)
+            if match:
+                values = [value.strip() for value in match.group(1).split(',')]
+                clauses[clause_name] = values
+
+        return clauses
+
     def mongoSplitter(statement):
         clauses = {
             "SELECT": [],
@@ -214,6 +254,7 @@ def translate_query(sentence, db, table=""):
 
     def mongoAgger(selectionList):
         for select in selectionList:
+
             if select[:3] in aggList:
                 # print(select + 'asdfagg')
                 groupAgg = mongoAggConverter(select)
@@ -262,8 +303,6 @@ def translate_query(sentence, db, table=""):
     comparisons = []
     numbers = []
 
-
-
     for word, tag in tagged_tokens:
         if tag == 'NN' or tag == 'NNS' or word in aggList:
             targets.append(word) # looking for nouns or specific adjectives as targets
@@ -308,351 +347,518 @@ def translate_query(sentence, db, table=""):
         if i == "order":
             orderIn = True
 
-    if orderIn == False:
-        if len(filteredClauses) == 1:
-            print("1")
-            selections = selector(filteredClauses)
-            if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
-                #table = input("What table are you querying from? ")
-                pass
-            statement = "SELECT " + selections + " FROM " + table
-        elif len(filteredClauses) == 2:
-            print("2")
-            if len(conditions) == 1 and conditions[0] == "from":
+    if "join" not in tokens:
+        if orderIn == False:
+            if len(filteredClauses) == 1:
+                print("1")
                 selections = selector(filteredClauses)
-                table = targets[-1]
-                if table == "":
+                if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
                     #table = input("What table are you querying from? ")
                     pass
-                elif conditions[0] == 'from':
-                    table = filteredClauses[1][0]
                 statement = "SELECT " + selections + " FROM " + table
-            elif len(conditions) == 1 and (
-                    conditions[0] == 'where' or conditions[0] == 'when' or conditions[0] == 'wherever' or conditions[
-                0] == 'whenever' or conditions[0] == 'if'):
-                if comparisons:
+            elif len(filteredClauses) == 2:
+                print("2")
+                if len(conditions) == 1 and conditions[0] == "from":
+                    selections = selector(filteredClauses)
+                    table = targets[-1]
+                    if table == "":
+                        #table = input("What table are you querying from? ")
+                        pass
+                    elif conditions[0] == 'from':
+                        table = filteredClauses[1][0]
+                    statement = "SELECT " + selections + " FROM " + table
+                elif len(conditions) == 1 and (
+                        conditions[0] == 'where' or conditions[0] == 'when' or conditions[0] == 'wherever' or conditions[
+                    0] == 'whenever' or conditions[0] == 'if'):
+                    if comparisons:
+                        selections = selector(filteredClauses)
+                        if table == "":
+                            #table = input("What table are you querying from? ")
+                            pass
+                        elif conditions[0] == 'from':
+                            table = filteredClauses[1][0]
+                        comparison = comparisonConverter(comparisons[0])
+                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
+                                    + comparison + " " + filteredClauses[-1][-1])
+                    else:
+                        statement = "Error"
+                elif (conditions[0] == 'where' or conditions[0] == 'when' or conditions[0] == 'wherever' or conditions[
+                    0] == 'whenever' or conditions[0] == 'if'):
                     selections = selector(filteredClauses)
                     if table == "":
                         #table = input("What table are you querying from? ")
                         pass
                     elif conditions[0] == 'from':
                         table = filteredClauses[1][0]
-                    comparison = comparisonConverter(comparisons[0])
-                    statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
-                                + comparison + " " + filteredClauses[-1][-1])
                 else:
-                    statement = "Error"
-            elif (conditions[0] == 'where' or conditions[0] == 'when' or conditions[0] == 'wherever' or conditions[
-                0] == 'whenever' or conditions[0] == 'if'):
+                    selections = selector(filteredClauses)
+                    statement = "SELECT " + selections + " FROM " + table
+            elif len(filteredClauses) == 3:
+                print("3")
                 selections = selector(filteredClauses)
-                if table == "":
+                if table == "" and "from" not in conditions:
                     #table = input("What table are you querying from? ")
                     pass
                 elif conditions[0] == 'from':
+                    # print(filteredClauses)
                     table = filteredClauses[1][0]
-            else:
-                selections = selector(filteredClauses)
-                statement = "SELECT " + selections + " FROM " + table
-        elif len(filteredClauses) == 3:
-            print("3")
-            selections = selector(filteredClauses)
-            if table == "" and "from" not in conditions:
-                #table = input("What table are you querying from? ")
-                pass
-            elif conditions[0] == 'from':
-                # print(filteredClauses)
-                table = filteredClauses[1][0]
 
-            if "group" in targets:
-                if "where" not in comparisons:
-                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + targets[-1])
-                else:
-                    print("here")
-            else:
-                if conditions[1] == "where":
-                    # print(comparisons)
-                    if len(comparisons) == 1:
-                        comparison = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
-                                    + comparison + " " + numbers[0])
-                    elif len(comparisons) == 2:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[-1])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + targets[2] + " "
-                                    + comparison1 + " " + numbers[0] + " AND " + targets[3] + " "
-                                    + comparison2 + " " + numbers[1])
-        else:
-            print("4")
-            selections = selector(filteredClauses)
-            if table == "" and "from" not in conditions:
-                #table = input("What table are you querying from? ")
-                pass
-            elif conditions[0] == 'from':
-                print(filteredClauses)
-                table = filteredClauses[1][0]
-
-            if "where" in conditions:
-                if "group" not in tokens:
-                    comparison1 = comparisonConverter(comparisons[0])
-                    comparison2 = comparisonConverter(comparisons[-1])
-                    statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                comparison1 + " " + numbers[0] + " AND " + filteredClauses[2][3] + " " +
-                                comparison2 + " " + numbers[1])
-                elif "having" not in tokens:
-                    if len(comparisons) == 1:
-
-                        if any(item in tokens for item in greaterList or lesserList or equalList):
-                            print("here")
-
-                        comparison = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison + " " + numbers[0] + " GROUP BY " + targets[-1])
+                if "group" in targets:
+                    if "where" not in comparisons:
+                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + targets[-1])
                     else:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[-1])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison1 + " " + filteredClauses[2][2] + " AND " + filteredClauses[2][3] + " " +
-                                    comparison2 + " " + filteredClauses[2][-1] + " GROUP BY " + targets[-1])
+                        print("here")
                 else:
-                    if len(comparisons) == 2: # one where and one having
+                    if conditions[1] == "where":
+                        # print(comparisons)
+                        if len(comparisons) == 1:
+                            comparison = comparisonConverter(comparisons[0])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
+                                        + comparison + " " + numbers[0])
+                        elif len(comparisons) == 2:
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + targets[2] + " "
+                                        + comparison1 + " " + numbers[0] + " AND " + targets[3] + " "
+                                        + comparison2 + " " + numbers[1])
+            else:
+                print("4")
+                selections = selector(filteredClauses)
+                if table == "" and "from" not in conditions:
+                    #table = input("What table are you querying from? ")
+                    pass
+                elif conditions[0] == 'from':
+                    print(filteredClauses)
+                    table = filteredClauses[1][0]
+
+                if "where" in conditions:
+                    if "group" not in tokens:
                         comparison1 = comparisonConverter(comparisons[0])
                         comparison2 = comparisonConverter(comparisons[-1])
-
                         statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
-                                    " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1])
-                    elif len(comparisons) == 3: # one and two
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[1])
-                        comparison3 = comparisonConverter(comparisons[2])
+                                    comparison1 + " " + numbers[0] + " AND " + filteredClauses[2][3] + " " +
+                                    comparison2 + " " + numbers[1])
+                    elif "having" not in tokens:
+                        if len(comparisons) == 1:
 
-                        if (conditions[conditions.index("where") + 3]) in equalList + greaterList + lesserList:
-                            print("in here")
-                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
-                                        " " + comparison1 + " " + numbers[0] + " AND " + targets[-4] + " " + comparison2 +
-                                        " " + numbers[1] + " GROUP BY " + filteredClauses[3][0] + " HAVING " +
-                                        targets[-1] + " " + comparison3 + " " + numbers[2])
+                            if any(item in tokens for item in greaterList or lesserList or equalList):
+                                print("here")
+
+                            comparison = comparisonConverter(comparisons[0])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison + " " + numbers[0] + " GROUP BY " + targets[-1])
                         else:
-                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
-                                        " " + comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
-                                        " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1] +
-                                        " AND " + targets[-1] + " " + comparison3 + " " + numbers[2])
-                    elif len(comparisons) == 4: # two and two
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[1])
-                        comparison3 = comparisonConverter(comparisons[2])
-                        comparison4 = comparisonConverter(comparisons[-1])
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison1 + " " + filteredClauses[2][2] + " AND " + filteredClauses[2][3] + " " +
+                                        comparison2 + " " + filteredClauses[2][-1] + " GROUP BY " + targets[-1])
+                    else:
+                        if len(comparisons) == 2: # one where and one having
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
 
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
-                                    comparison1 + " " + numbers[0] + " AND " + targets[5] + " " +
-                                    comparison2 + " " + numbers[1] + " GROUP BY " + filteredClauses[4][0] +
-                                    " HAVING " + targets[-2] + " " + comparison3 + " " + numbers[2] +
-                                    " AND " + targets[-1] + " " + comparison4 + " " + numbers[3])
-            else: # just having
-                if len(comparisons) == 1: # only one having condition
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
+                                        " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1])
+                        elif len(comparisons) == 3: # one and two
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[1])
+                            comparison3 = comparisonConverter(comparisons[2])
+
+                            if (conditions[conditions.index("where") + 3]) in equalList + greaterList + lesserList:
+                                print("in here")
+                                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
+                                            " " + comparison1 + " " + numbers[0] + " AND " + targets[-4] + " " + comparison2 +
+                                            " " + numbers[1] + " GROUP BY " + filteredClauses[3][0] + " HAVING " +
+                                            targets[-1] + " " + comparison3 + " " + numbers[2])
+                            else:
+                                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
+                                            " " + comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
+                                            " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1] +
+                                            " AND " + targets[-1] + " " + comparison3 + " " + numbers[2])
+                        elif len(comparisons) == 4: # two and two
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[1])
+                            comparison3 = comparisonConverter(comparisons[2])
+                            comparison4 = comparisonConverter(comparisons[-1])
+
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
+                                        comparison1 + " " + numbers[0] + " AND " + targets[5] + " " +
+                                        comparison2 + " " + numbers[1] + " GROUP BY " + filteredClauses[4][0] +
+                                        " HAVING " + targets[-2] + " " + comparison3 + " " + numbers[2] +
+                                        " AND " + targets[-1] + " " + comparison4 + " " + numbers[3])
+                else: # just having
+                    if len(comparisons) == 1: # only one having condition
+                        comparison = comparisonConverter(comparisons[0])
+                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                                        filteredClauses[-1][0] + " " + comparison + " " + numbers[0] )
+                    else: # multiple having conditions
+                        comparison1 = comparisonConverter(comparisons[0])
+                        comparison2 = comparisonConverter(comparisons[-1])
+                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                                    filteredClauses[-1][0] + " " + comparison1 + " " + numbers[0] + " AND " +
+                                    targets[-1] + " " + comparison2 + " " + numbers[1])
+
+
+        else: # order is in
+            # print("here order")
+
+            if len(filteredClauses) == 3:
+                print("1")
+                selections = selector(filteredClauses)
+                table = filteredClauses[1][0]
+                if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
+                    #table = input("What table are you querying from? ")
+                    pass
+                statement = "SELECT " + selections + " FROM " + table + " ORDER BY " + filteredClauses[2][0] + order
+            elif len(filteredClauses) == 4:
+                print("2")
+                if len(comparisons) == 1 and conditions[0] == "from":
+                    selections = selector(filteredClauses)
+                    table = filteredClauses[1][0]
+                    if table == "":
+                        #table = input("What table are you querying from? ")
+                        pass
+                    elif conditions[0] == 'from':
+                        table = filteredClauses[1][0]
                     comparison = comparisonConverter(comparisons[0])
-                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
-                                    filteredClauses[-1][0] + " " + comparison + " " + numbers[0] )
-                else: # multiple having conditions
-                    comparison1 = comparisonConverter(comparisons[0])
-                    comparison2 = comparisonConverter(comparisons[-1])
-                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
-                                filteredClauses[-1][0] + " " + comparison1 + " " + numbers[0] + " AND " +
-                                targets[-1] + " " + comparison2 + " " + numbers[1])
-
-
-    else: # order is in
-        # print("here order")
-
-        if len(filteredClauses) == 3:
-            print("1")
-            selections = selector(filteredClauses)
-            table = filteredClauses[1][0]
-            if table == "":  # if we don't have a table, ask for it, we can assume to reuse it
-                #table = input("What table are you querying from? ")
-                pass
-            statement = "SELECT " + selections + " FROM " + table + " ORDER BY " + filteredClauses[2][0] + order
-        elif len(filteredClauses) == 4:
-            print("2")
-            if len(comparisons) == 1 and conditions[0] == "from":
-                selections = selector(filteredClauses)
-                table = filteredClauses[1][0]
-                if table == "":
-                    #table = input("What table are you querying from? ")
-                    pass
-                elif conditions[0] == 'from':
-                    table = filteredClauses[1][0]
-                comparison = comparisonConverter(comparisons[0])
-                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                            comparison + " " + numbers[0] + " ORDER BY " + filteredClauses[-1][0] + order)
-            elif len(comparisons) == 2:
-                selections = selector(filteredClauses)
-                table = filteredClauses[1][0]
-                if table == "":
-                    #table = input("What table are you querying from? ")
-                    pass
-                elif conditions[0] == 'from':
-                    table = filteredClauses[1][0]
-                comparison1 = comparisonConverter(comparisons[0])
-                comparison2 = comparisonConverter(comparisons[1])
-
-                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                            comparison1 + " " + numbers[0] + " AND " + targets[3] + " " + comparison2 + " " +
-                            numbers[1] + " ORDER BY " + filteredClauses[-1][0] + order)
-            elif "group" in tokens:
-                selections = selector(filteredClauses)
-                # print("hewrwerewrw")
-                statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] +
-                            " ORDER BY " + targets[-1] + order)
-            else:
-                print("Error")
-        elif len(filteredClauses) == 5:
-            print("3")
-            selections = selector(filteredClauses)
-            if table == "" and "from" not in conditions:
-                #table = input("What table are you querying from? ")
-                pass
-            elif conditions[0] == 'from':
-                print(filteredClauses)
-                table = filteredClauses[1][0]
-
-            if "group" in targets:
-                if "where" not in tokens:
-                    if len(comparisons) == 1:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[3][0] +
-                                    " HAVING " + filteredClauses[-2][0] + " " + comparison1 + " " + numbers[0] + " ORDER BY " +
-                                    targets[-1] + order)
-                    elif len(comparisons) == 2:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[1])
-                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[3][0] +
-                                    " HAVING " + filteredClauses[-2][0] + " " + comparison1 + " " + numbers[0] + " AND " +
-                                    targets[-3] + " " + comparison2 + " " + numbers[1] + " ORDER BY " + targets[-1] + order)
-                    else:
-                        statement = "Waiting on functionality"
-                elif "where" in tokens:
-                    comparison1 = comparisonConverter(comparisons[0])
-                    statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " "  +
-                                comparison1 + " "  + numbers[0] + " GROUP BY " + filteredClauses[3][0] + " ORDER BY " +
-                                targets[-1] + order)
-            else:
-                if conditions[1] == "where":
-                    if len(comparisons) == 1:
-                        comparison = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
-                                    + comparison + " " + numbers[0] + order)
-                    elif len(comparisons) == 2:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[-1])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + targets[2] + " "
-                                    + comparison1 + " " + numbers[0] + " AND " + targets[3] + " "
-                                    + comparison2 + " " + numbers[1] + order)
-        else:
-            print("4")
-            selections = selector(filteredClauses)
-            if table == "" and "from" not in conditions:
-                #table = input("What table are you querying from? ")
-                pass
-            elif conditions[0] == 'from':
-                print(filteredClauses)
-                table = filteredClauses[1][0]
-
-            if "where" in conditions:
-                if "group" not in tokens:
-                    comparison1 = comparisonConverter(comparisons[0])
-                    comparison2 = comparisonConverter(comparisons[-1])
                     statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                comparison1 + " " + numbers[0] + " AND " + filteredClauses[2][3] + " " +
-                                comparison2 + " " + numbers[1] + order)
-                elif "having" not in tokens:
-                    if len(comparisons) == 1:
+                                comparison + " " + numbers[0] + " ORDER BY " + filteredClauses[-1][0] + order)
+                elif len(comparisons) == 2:
+                    selections = selector(filteredClauses)
+                    table = filteredClauses[1][0]
+                    if table == "":
+                        #table = input("What table are you querying from? ")
+                        pass
+                    elif conditions[0] == 'from':
+                        table = filteredClauses[1][0]
+                    comparison1 = comparisonConverter(comparisons[0])
+                    comparison2 = comparisonConverter(comparisons[1])
 
-                        if any(item in tokens for item in greaterList or lesserList or equalList):
-                            print("here")
-
-                        comparison = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison + " " + numbers[0] + " GROUP BY " + targets[-1] + order)
-                    else:
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[-1])
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison1 + " " + filteredClauses[2][2] + " AND " + filteredClauses[2][3] + " " +
-                                    comparison2 + " " + filteredClauses[2][-1] + " GROUP BY " + targets[-1] + order)
+                    statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                comparison1 + " " + numbers[0] + " AND " + targets[3] + " " + comparison2 + " " +
+                                numbers[1] + " ORDER BY " + filteredClauses[-1][0] + order)
+                elif "group" in tokens:
+                    selections = selector(filteredClauses)
+                    # print("hewrwerewrw")
+                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] +
+                                " ORDER BY " + targets[-1] + order)
                 else:
-                    if len(comparisons) == 2: # one where and one having
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[-1])
+                    print("Error")
+            elif len(filteredClauses) == 5:
+                print("3")
+                selections = selector(filteredClauses)
+                if table == "" and "from" not in conditions:
+                    #table = input("What table are you querying from? ")
+                    pass
+                elif conditions[0] == 'from':
+                    print(filteredClauses)
+                    table = filteredClauses[1][0]
 
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
-                                    comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
-                                    " HAVING " + filteredClauses[-2][0] + " " + comparison2 + " " + numbers[1] +
-                                    " ORDER BY " + targets[-1] + order)
-                    elif len(comparisons) == 3: # one and two
-                        comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[1])
-                        comparison3 = comparisonConverter(comparisons[2])
-
-                        if (conditions[conditions.index("where") + 3]) in equalList + greaterList + lesserList:
-                            # print("in here")
-                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
-                                        " " + comparison1 + " " + numbers[0] + " AND " + targets[-4] + " " + comparison2 +
-                                        " " + numbers[1] + " GROUP BY " + filteredClauses[3][0] + " HAVING " +
-                                        targets[-3] + " " + comparison3 + " " + numbers[2] + " ORDER BY " + targets[-1] + order)
-                        else:
-                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
-                                        " " + comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
-                                        " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1] +
-                                        " AND " + targets[-3] + " " + comparison3 + " " + numbers[2] + " ORDER BY " +
+                if "group" in targets:
+                    if "where" not in tokens:
+                        if len(comparisons) == 1:
+                            comparison1 = comparisonConverter(comparisons[0])
+                            statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[3][0] +
+                                        " HAVING " + filteredClauses[-2][0] + " " + comparison1 + " " + numbers[0] + " ORDER BY " +
                                         targets[-1] + order)
-                    elif len(comparisons) == 4: # two and two
+                        elif len(comparisons) == 2:
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[1])
+                            statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[3][0] +
+                                        " HAVING " + filteredClauses[-2][0] + " " + comparison1 + " " + numbers[0] + " AND " +
+                                        targets[-3] + " " + comparison2 + " " + numbers[1] + " ORDER BY " + targets[-1] + order)
+                        else:
+                            statement = "Waiting on functionality"
+                    elif "where" in tokens:
                         comparison1 = comparisonConverter(comparisons[0])
-                        comparison2 = comparisonConverter(comparisons[1])
-                        comparison3 = comparisonConverter(comparisons[2])
-                        comparison4 = comparisonConverter(comparisons[-1])
+                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " "  +
+                                    comparison1 + " "  + numbers[0] + " GROUP BY " + filteredClauses[3][0] + " ORDER BY " +
+                                    targets[-1] + order)
+                else:
+                    if conditions[1] == "where":
+                        if len(comparisons) == 1:
+                            comparison = comparisonConverter(comparisons[0])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[-1][0] + " "
+                                        + comparison + " " + numbers[0] + order)
+                        elif len(comparisons) == 2:
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + targets[2] + " "
+                                        + comparison1 + " " + numbers[0] + " AND " + targets[3] + " "
+                                        + comparison2 + " " + numbers[1] + order)
+            else:
+                print("4")
+                selections = selector(filteredClauses)
+                if table == "" and "from" not in conditions:
+                    #table = input("What table are you querying from? ")
+                    pass
+                elif conditions[0] == 'from':
+                    print(filteredClauses)
+                    table = filteredClauses[1][0]
 
-                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
-                                    comparison1 + " " + numbers[0] + " AND " + targets[5] + " " +
-                                    comparison2 + " " + numbers[1] + " GROUP BY " + filteredClauses[4][0] +
-                                    " HAVING " + targets[-4] + " " + comparison3 + " " + numbers[2] +
-                                    " AND " + targets[-3] + " " + comparison4 + " " + numbers[3] + " ORDER BY " + targets[-1]
-                                    + order)
-            else: # just having
-                if len(comparisons) == 1: # only one having condition
-                    comparison = comparisonConverter(comparisons[0])
-                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
-                                    filteredClauses[-1][0] + " " + comparison + " " + numbers[0] + order)
-                else: # multiple having conditions
-                    comparison1 = comparisonConverter(comparisons[0])
-                    comparison2 = comparisonConverter(comparisons[-1])
-                    statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
-                                filteredClauses[-1][0] + " " + comparison1 + " " + numbers[0] + " AND " +
-                                targets[-1] + " " + comparison2 + " " + numbers[1] + order)
+                if "where" in conditions:
+                    if "group" not in tokens:
+                        comparison1 = comparisonConverter(comparisons[0])
+                        comparison2 = comparisonConverter(comparisons[-1])
+                        statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                    comparison1 + " " + numbers[0] + " AND " + filteredClauses[2][3] + " " +
+                                    comparison2 + " " + numbers[1] + order)
+                    elif "having" not in tokens:
+                        if len(comparisons) == 1:
 
-    if db == "mongo":
-        mongoClauses = mongoSplitter(statement)
-        print(mongoClauses)
+                            if any(item in tokens for item in greaterList or lesserList or equalList):
+                                print("here")
 
-        mongoStatement = ''
+                            comparison = comparisonConverter(comparisons[0])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison + " " + numbers[0] + " GROUP BY " + targets[-1] + order)
+                        else:
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison1 + " " + filteredClauses[2][2] + " AND " + filteredClauses[2][3] + " " +
+                                        comparison2 + " " + filteredClauses[2][-1] + " GROUP BY " + targets[-1] + order)
+                    else:
+                        if len(comparisons) == 2: # one where and one having
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[-1])
 
-        mongoTable = mongoClauses['FROM'][0]
-        print(mongoTable)
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
+                                        comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
+                                        " HAVING " + filteredClauses[-2][0] + " " + comparison2 + " " + numbers[1] +
+                                        " ORDER BY " + targets[-1] + order)
+                        elif len(comparisons) == 3: # one and two
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[1])
+                            comparison3 = comparisonConverter(comparisons[2])
 
-        aggStatement = False
-        for word in aggList:
-            if word in statement:
-                aggStatement = True
+                            if (conditions[conditions.index("where") + 3]) in equalList + greaterList + lesserList:
+                                # print("in here")
+                                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
+                                            " " + comparison1 + " " + numbers[0] + " AND " + targets[-4] + " " + comparison2 +
+                                            " " + numbers[1] + " GROUP BY " + filteredClauses[3][0] + " HAVING " +
+                                            targets[-3] + " " + comparison3 + " " + numbers[2] + " ORDER BY " + targets[-1] + order)
+                            else:
+                                statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] +
+                                            " " + comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
+                                            " HAVING " + filteredClauses[-1][0] + " " + comparison2 + " " + numbers[1] +
+                                            " AND " + targets[-3] + " " + comparison3 + " " + numbers[2] + " ORDER BY " +
+                                            targets[-1] + order)
+                        elif len(comparisons) == 4: # two and two
+                            comparison1 = comparisonConverter(comparisons[0])
+                            comparison2 = comparisonConverter(comparisons[1])
+                            comparison3 = comparisonConverter(comparisons[2])
+                            comparison4 = comparisonConverter(comparisons[-1])
 
-        if len(mongoClauses['GROUP BY']) != 0:
-            print("group")
+                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
+                                        comparison1 + " " + numbers[0] + " AND " + targets[5] + " " +
+                                        comparison2 + " " + numbers[1] + " GROUP BY " + filteredClauses[4][0] +
+                                        " HAVING " + targets[-4] + " " + comparison3 + " " + numbers[2] +
+                                        " AND " + targets[-3] + " " + comparison4 + " " + numbers[3] + " ORDER BY " + targets[-1]
+                                        + order)
+                else: # just having
+                    if len(comparisons) == 1: # only one having condition
+                        comparison = comparisonConverter(comparisons[0])
+                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                                        filteredClauses[-1][0] + " " + comparison + " " + numbers[0] + order)
+                    else: # multiple having conditions
+                        comparison1 = comparisonConverter(comparisons[0])
+                        comparison2 = comparisonConverter(comparisons[-1])
+                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                                    filteredClauses[-1][0] + " " + comparison1 + " " + numbers[0] + " AND " +
+                                    targets[-1] + " " + comparison2 + " " + numbers[1] + order)
+
+        if db == "mongo":
+            mongoClauses = mongoSplitter(statement)
+            print(mongoClauses)
+
+            mongoStatement = ''
+
+            mongoTable = mongoClauses['FROM'][0]
+            print(mongoTable)
+
+            aggStatement = False
+            for word in aggList:
+                if word in statement:
+                    aggStatement = True
+
+            if len(mongoClauses['GROUP BY']) != 0:
+                print("group")
+
+                selectionList = mongoClauses['SELECT']
+                mongoAggregation = mongoAgger(selectionList)
+                # print("jeer")
+                mongoProjection = mongoAggProjector(selectionList)
+                # print(mongoProjection)
+                mongoGroup = mongoClauses['GROUP BY'][0]
+
+                mongoWhere = "{}"
+                if len(mongoClauses['WHERE']) != 0:
+                    whereList = mongoClauses['WHERE']
+                    mongoWhere = mongoWherer(whereList[0])
+                    print(mongoWhere)
+
+                mongoHaving = "{}"
+                if len(mongoClauses['HAVING']) != 0:
+                    havingList = mongoClauses['HAVING']
+                    mongoHaving = mongoWherer(havingList[0])
+                    print(mongoHaving)
+
+                mongoOrder = ""
+                if len(mongoClauses['ORDER BY']) != 0:
+                    orderList = mongoClauses['ORDER BY'][0]
+                    if " " in orderList:
+                        orderParts = orderList.split(" ")
+                        # print(orderParts)
+                        if orderParts[1] == "ASC":
+                            mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
+                        else:
+                            mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                    else:
+                        mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
+
+                mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": "$' + mongoGroup +
+                                '", "' + mongoAggregation + "}}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
+                                mongoHaving + "}, {\"$sort\": {" + mongoOrder + "}}])")
+
+            elif aggStatement == True:
+                print("agg")
+
+                selectionList = mongoClauses['SELECT']
+                mongoAggregation = mongoAgger(selectionList)
+                # print("jeer")
+                mongoProjection = mongoAggProjector(selectionList)
+                # print(mongoProjection)
+
+                mongoWhere = ""
+                if len(mongoClauses['WHERE']) != 0:
+                    whereList = mongoClauses['WHERE']
+                    mongoWhere = mongoWherer(whereList[0])
+                    print(mongoWhere)
+
+                mongoOrder = ""
+                if len(mongoClauses['ORDER BY']) != 0:
+                    orderList = mongoClauses['ORDER BY'][0]
+                    if " " in orderList:
+                        orderParts = orderList.split(" ")
+                        # print(orderParts)
+                        if orderParts[1] == "ASC":
+                            mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
+                        else:
+                            mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                    else:
+                        mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
+
+                    # print(mongoOrder)
+
+                if mongoWhere != "":
+                    if mongoOrder != "":
+                        mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id": null, "' +
+                                            mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
+                    else:
+                        mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": null, "' +
+                                            mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}])")
+                else:
+                    if mongoOrder != "":
+                        mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
+                                        "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
+                    else:
+                        mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
+                                        "}}, {\"$project\": {" + mongoProjection  + "}}])")
+
+            else:
+                print("no group and no agg")
+
+                if mongoClauses['SELECT'][0] != "*":
+                    selectionList = mongoClauses['SELECT']
+                    mongoProjection = mongoSelector(selectionList)
+                    print(mongoProjection)
+                else:
+                    mongoProjection = ""
+
+                mongoWhere = ""
+                if len(mongoClauses['WHERE']) != 0:
+                    whereList = mongoClauses['WHERE']
+                    mongoWhere = mongoWherer(whereList[0])
+                    print(mongoWhere)
+
+                mongoOrder = ""
+                if len(mongoClauses['ORDER BY']) != 0:
+                    orderList = mongoClauses['ORDER BY'][0]
+                    if " " in orderList:
+                        orderParts = orderList.split(" ")
+                        # print(orderParts)
+                        if orderParts[1] == "ASC":
+                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": 1})"
+                        else:
+                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": -1})"
+                    else:
+                        mongoOrder = ".sort({ \"" + mongoClauses['ORDER BY'][0] + "\": 1})"
+
+                    print(mongoOrder)
+                if mongoWhere == "":
+                    mongoWhere = "{}"
+                mongoStatement = "db." + mongoTable + ".find(" + mongoWhere + ", {" + mongoProjection + "})" + mongoOrder
+
+            print(mongoClauses)
+            return mongoStatement
+
+        return statement + ';'
+
+
+    elif "join" in tokens:
+
+        # print("join is in")
+        print("filtered clauses:", filteredClauses)
+        selections = selector(filteredClauses)
+        print("selections:", selections)
+
+        if orderIn == False:
+            if len(filteredClauses) == 3:
+                joiningWord = joinWorder(filteredClauses[1])
+                statement = "SELECT " + selections + " FROM " + filteredClauses[1][0] + joiningWord + filteredClauses[1][-1] + " ON " + \
+                        filteredClauses[1][0] + "." + filteredClauses[2][0] + " " + comparisonConverter(comparisons[0]) + " " + \
+                        filteredClauses[1][-1] + "." + filteredClauses[2][-1]
+            elif len(filteredClauses) == 4:
+                joiningWord = joinWorder(filteredClauses[1])
+                statement = ("SELECT " + selections + " FROM " + filteredClauses[1][0] + joiningWord + filteredClauses[1][-1] + \
+                        " ON " + filteredClauses[1][0] + "." + filteredClauses[2][0] + " " + comparisonConverter(comparisons[0]) + \
+                        " " + filteredClauses[1][-1] + "." + filteredClauses[2][-1]) + " WHERE " + filteredClauses[-1][0] + " " + \
+                        comparisonConverter(comparisons[-1]) + " " + numbers[0]
+
+        else:
+            # print("order in")
+            if len(filteredClauses) == 4:
+                joiningWord = joinWorder(filteredClauses[1])
+                statement = "SELECT " + selections + " FROM " + filteredClauses[1][0] + joiningWord + filteredClauses[1][-1] + " ON " + \
+                        filteredClauses[1][0] + "." + filteredClauses[2][0] + " " + comparisonConverter(comparisons[0]) + " " + \
+                        filteredClauses[1][-1] + "." + filteredClauses[2][-1] + " ORDER BY " + targets[-1] + order
+            elif len(filteredClauses) == 5:
+                joiningWord = joinWorder(filteredClauses[1])
+                statement = ("SELECT " + selections + " FROM " + filteredClauses[1][0] + joiningWord + filteredClauses[1][-1] + \
+                        " ON " + filteredClauses[1][0] + "." + filteredClauses[2][0] + " " + comparisonConverter(comparisons[0]) + \
+                        " " + filteredClauses[1][-1] + "." + filteredClauses[2][-1]) + " WHERE " + filteredClauses[-1][0] + " " + \
+                        comparisonConverter(comparisons[-1]) + " " + numbers[0] + " ORDER BY " + targets[-1] + order
+
+        if db == "mongo":
+            print(statement)
+            mongoClauses = mongoJoinSplitter(statement)
+            print(mongoClauses)
+
+            mongoStatement = ''
 
             selectionList = mongoClauses['SELECT']
-            mongoAggregation = mongoAgger(selectionList)
             # print("jeer")
             mongoProjection = mongoAggProjector(selectionList)
             # print(mongoProjection)
-            mongoGroup = mongoClauses['GROUP BY'][0]
+
+            mongoTable = mongoClauses['FROM'][0]
+            print(mongoTable)
+
+            joinParts = mongoClauses['JOIN'][0].split(" ")
+            print(joinParts)
 
             mongoWhere = "{}"
             if len(mongoClauses['WHERE']) != 0:
@@ -660,12 +866,6 @@ def translate_query(sentence, db, table=""):
                 mongoWhere = mongoWherer(whereList[0])
                 print(mongoWhere)
 
-            mongoHaving = "{}"
-            if len(mongoClauses['HAVING']) != 0:
-                havingList = mongoClauses['HAVING']
-                mongoHaving = mongoWherer(havingList[0])
-                print(mongoHaving)
-
             mongoOrder = ""
             if len(mongoClauses['ORDER BY']) != 0:
                 orderList = mongoClauses['ORDER BY'][0]
@@ -673,96 +873,34 @@ def translate_query(sentence, db, table=""):
                     orderParts = orderList.split(" ")
                     # print(orderParts)
                     if orderParts[1] == "ASC":
-                        mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
+                        mongoOrder = orderParts[0] + ": 1"
                     else:
-                        mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                        mongoOrder = orderParts[0] + ": -1"
                 else:
-                    mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
+                    mongoOrder = mongoClauses['ORDER BY'][0] + ": 1"
 
-            mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": "$' + mongoGroup +
-                            '", "' + mongoAggregation + "}}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
-                            mongoHaving + "}, {\"$sort\": {" + mongoOrder + "}}])")
-
-        elif aggStatement == True:
-            print("agg")
-
-            selectionList = mongoClauses['SELECT']
-            mongoAggregation = mongoAgger(selectionList)
-            # print("jeer")
-            mongoProjection = mongoAggProjector(selectionList)
-            # print(mongoProjection)
-
-            mongoWhere = ""
             if len(mongoClauses['WHERE']) != 0:
-                whereList = mongoClauses['WHERE']
-                mongoWhere = mongoWherer(whereList[0])
-                print(mongoWhere)
 
-            mongoOrder = ""
-            if len(mongoClauses['ORDER BY']) != 0:
-                orderList = mongoClauses['ORDER BY'][0]
-                if " " in orderList:
-                    orderParts = orderList.split(" ")
-                    # print(orderParts)
-                    if orderParts[1] == "ASC":
-                        mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
-                    else:
-                        mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                # print(mongoClauses['WHERE'][0])
+                if len(mongoClauses['ORDER BY']) != 0:
+                    # print(mongoClauses['ORDER BY'][0])
+                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
+                            filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {\"$match\": " + \
+                            mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}, {\"$sort\": {" + mongoOrder + "}}])"
                 else:
-                    mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
-
-                # print(mongoOrder)
-
-            if mongoWhere != "":
-                if mongoOrder != "":
-                    mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id": null, "' +
-                                        mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
-                else:
-                    mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": null, "' +
-                                        mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}])")
+                    print("where no order")
+                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
+                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {\"$match\": " + \
+                                mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}])"
             else:
-                if mongoOrder != "":
-                    mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
-                                    "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
+                if len(mongoClauses['ORDER BY']) != 0:
+                    print("just order")
+                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
+                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, " + \
+                                "{\"$project\": {" + mongoProjection + "}}, {\"$sort\": {" + mongoOrder + "}}])"
                 else:
-                    mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
-                                    "}}, {\"$project\": {" + mongoProjection  + "}}])")
-
-        else:
-            print("no group and no agg")
-
-            if mongoClauses['SELECT'][0] != "*":
-                selectionList = mongoClauses['SELECT']
-                mongoProjection = mongoSelector(selectionList)
-                print(mongoProjection)
-            else:
-                mongoProjection = ""
-
-            mongoWhere = ""
-            if len(mongoClauses['WHERE']) != 0:
-                whereList = mongoClauses['WHERE']
-                mongoWhere = mongoWherer(whereList[0])
-                print(mongoWhere)
-
-            mongoOrder = ""
-            if len(mongoClauses['ORDER BY']) != 0:
-                orderList = mongoClauses['ORDER BY'][0]
-                if " " in orderList:
-                    orderParts = orderList.split(" ")
-                    # print(orderParts)
-                    if orderParts[1] == "ASC":
-                        mongoOrder = ".sort({ \"" + orderParts[0] + "\": 1})"
-                    else:
-                        mongoOrder = ".sort({ \"" + orderParts[0] + "\": -1})"
-                else:
-                    mongoOrder = ".sort({ \"" + mongoClauses['ORDER BY'][0] + "\": 1})"
-
-                print(mongoOrder)
-            if mongoWhere == "":
-                mongoWhere = "{}"
-            mongoStatement = "db." + mongoTable + ".find(" + mongoWhere + ", {" + mongoProjection + "})" + mongoOrder
-
-        print(mongoClauses)
-        return mongoStatement
-
-    return statement + ';'
+                    print("no where or order")
+                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
+                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, " + \
+                                "{\"$project\": {" + mongoProjection + "}}])"
+        return statement
