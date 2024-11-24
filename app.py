@@ -65,7 +65,7 @@ for message in st.session_state.messages:
         if isinstance(message['content'], pd.DataFrame):
             st.table(message['content'])
         else:
-            st.markdown(message['content'])
+            st.text(message['content'])
 
 # User input form
 user_input = st.chat_input("You:", key="input")
