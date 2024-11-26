@@ -118,7 +118,7 @@ def example_sql(engine, table, construct=None):
     if sql_fields['GROUP BY'] is not None:
         sql_fields['SELECT'] = f'{index}, {agg}({condition})'
     else:
-        sql_fields['SELECT'] = f'{index} {condition}'
+        sql_fields['SELECT'] = f'{index}, {condition}'
     
     output_string = ''
     for s in ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY']:
@@ -138,6 +138,8 @@ def example_mongo(client, table, construct=None):
     index = random.choice(keys)
     agg = random.choice(['$max', '$min'])
     condition = random.choice(keys)
+    while condition == index:
+        condition = random.choice(keys)
     operator = random.choice(['$gt', '$lt', '$eq', '$ne', '$gte', '$lte'])
     val = random.randrange(0, 11)
     direction = random.choice([0, 1])
