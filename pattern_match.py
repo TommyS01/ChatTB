@@ -819,6 +819,7 @@ def translate_query(sentence, db, table=""):
                 if mongoClauses['SELECT'][0] != "*":
                     selectionList = mongoClauses['SELECT']
                     mongoProjection = mongoSelector(selectionList)
+                    mongoProjeciton = mongoProjection.strip(',')
                     print(mongoProjection)
                 else:
                     mongoProjection = ""
