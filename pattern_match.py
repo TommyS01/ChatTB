@@ -483,7 +483,7 @@ def translate_query(sentence, db, table=""):
                             comparison3 = comparisonConverter(comparisons[2])
                             comparison4 = comparisonConverter(comparisons[-1])
 
-                            statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
+                            statement = ("SELECT " + selections + " AS agg FROM " + table + " WHERE " + filteredClauses[3][0] + " " +
                                         comparison1 + " " + numbers[0] + " AND " + targets[5] + " " +
                                         comparison2 + " " + numbers[1] + " GROUP BY " + filteredClauses[4][0] +
                                         " HAVING " + targets[-2] + " " + comparison3 + " " + numbers[2] +
@@ -491,12 +491,12 @@ def translate_query(sentence, db, table=""):
                 else: # just having
                     if len(comparisons) == 1: # only one having condition
                         comparison = comparisonConverter(comparisons[0])
-                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                        statement = ("SELECT " + selections + " AS agg FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
                                         filteredClauses[-1][0] + " " + comparison + " " + numbers[0] )
                     else: # multiple having conditions
                         comparison1 = comparisonConverter(comparisons[0])
                         comparison2 = comparisonConverter(comparisons[-1])
-                        statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
+                        statement = ("SELECT " + selections + " AS agg FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
                                     filteredClauses[-1][0] + " " + comparison1 + " " + numbers[0] + " AND " +
                                     targets[-1] + " " + comparison2 + " " + numbers[1])
 
