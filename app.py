@@ -119,13 +119,13 @@ if user_input:
             response, columns = execute_sql(query, sql_engine)
             data = pd.DataFrame(response, columns=columns)
             response = data
-        except:
-            response = f'ERROR EXECUTING QUERY'
+        except Exception as e:
+            response = f'ERROR EXECUTING QUERY: {e}'
     else:
         try:
             response = execute_mongo(query, mongo_client)
-        except:
-            response = f'ERROR EXECUTING QUERY'
+        except Exception as e:
+            response = f'ERROR EXECUTING QUERY {e}'
     st.session_state.messages.append({"role": "assistant", "content": response})
     
     with st.chat_message('assistant'):
