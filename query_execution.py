@@ -142,7 +142,7 @@ def example_mongo(client, table, construct=None):
         condition = random.choice(keys)
     operator = random.choice(['$gt', '$lt', '$eq', '$ne', '$gte', '$lte'])
     val = random.randrange(0, 11)
-    direction = random.choice([0, 1])
+    direction = random.choice([-1, 1])
 
     mongo_query = {
         'MATCH': None,
@@ -168,10 +168,14 @@ def example_mongo(client, table, construct=None):
 
     if mongo_query['GROUP'] is not None:
         sort_field = random.choice(['_id', 'agg'])
-        if construct != 'SORT':
-            mongo_query['SORT'] = random.choice([{'$sort': {sort_field: direction}}, None])
-        else:
-            mongo_query['SORT'] = {'$sort': {sort_field: direction}}
+    else:
+        sort_field = random.choice([index, condition])
+
+    if construct != 'SORT':
+        mongo_query['SORT'] = random.choice([{'$sort': {sort_field: direction}}, None])
+    else:
+        mongo_query['SORT'] = {'$sort': {sort_field: direction}}
+    
     
     pipeline = []
     for q in ['MATCH', 'GROUP', 'PROJECT', 'SORT']:

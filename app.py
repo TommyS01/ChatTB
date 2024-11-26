@@ -64,6 +64,9 @@ for message in st.session_state.messages:
     with st.chat_message(message['role']):
         if isinstance(message['content'], pd.DataFrame):
             st.table(message['content'])
+        elif isinstance(message['content'], list):
+            for m in message['content']:
+                st.text(m)
         else:
             st.text(message['content'])
 
@@ -81,23 +84,26 @@ if user_input:
     db_in = 'mongo' if db == 'MongoDB' else ''
 
     # TODO: Check if example query
-    if "example query" in user_input:
-        table = re.findall('from (.+)', user_input)[0]
-        if 'with ' not in user_input:
-            if db_in == '':
-                query = example_sql(engine=sql_engine, table=table)
+    try:
+        if "example query" in user_input:
+            table = re.findall('from (.+)', user_input)[0]
+            if 'with ' not in user_input:
+                if db_in == '':
+                    query = example_sql(engine=sql_engine, table=table)
+                else:
+                    query = example_mongo(client=mongo_client, table=table)
+                    pass
             else:
-                query = example_mongo(client=mongo_client, table=table)
-                pass
+                construct = re.findall("example query with (.+) from", user_input)[0]
+                construct = construct.upper().strip()
+                if db_in == '':
+                    query = example_sql(engine=sql_engine, table=table, construct=construct)
+                else:
+                    query = example_mongo(client=mongo_client, table=table, construct=construct)
         else:
-            construct = re.findall("example query with (.+) from", user_input)[0]
-            construct = construct.upper().strip()
-            if db_in == '':
-                query = example_sql(engine=sql_engine, table=table, construct=construct)
-            else:
-                query = example_mongo(client=mongo_client, table=table, construct=construct)
-    else:
-        query = translate_query(user_input, db=db_in)
+            query = translate_query(user_input, db=db_in)
+    except:
+        query = 'BAD EXAMPLE QUERY'
 
     # Print query
     response = f'Query: {query}'
@@ -107,16 +113,25 @@ if user_input:
 
     # Print results
     if db_in == '':
-        response, columns = execute_sql(query, sql_engine)
-        data = pd.DataFrame(response, columns=columns)
-        response = data
+        try:
+            response, columns = execute_sql(query, sql_engine)
+            data = pd.DataFrame(response, columns=columns)
+            response = data
+        except:
+            response = f'ERROR EXECUTING QUERY'
     else:
-        response = execute_mongo(query, mongo_client)
+        try:
+            response = execute_mongo(query, mongo_client)
+        except:
+            response = f'ERROR EXECUTING QUERY'
     st.session_state.messages.append({"role": "assistant", "content": response})
     
     with st.chat_message('assistant'):
         if isinstance(response, pd.DataFrame):
             st.table(response)
+        elif isinstance(response, list):
+            for m in response:
+                st.text(m)
         else:
             st.text(response)
 
