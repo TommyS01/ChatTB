@@ -95,7 +95,7 @@ def example_sql(engine, table, construct=None):
     index = random.choice(all_cols)
     agg = random.choice(['MAX', 'MIN'])
     condition = random.choice(numeric_cols)
-    operator = random.choice(['<', '>', '!=', '=', '<=', '>='])
+    operator = random.choice(['<', '>', '='])
     val = random.randrange(0,11)
     direction = random.choice(['DESC', 'ASC'])
 

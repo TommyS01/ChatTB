@@ -9,9 +9,9 @@ from numpy.ma.core import equal
 
 # from nltk.misc.sort import selection
 
-nltk.download('punkt_tab')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger_eng')
+#nltk.download('punkt_tab')
+#nltk.download('stopwords')
+#nltk.download('averaged_perceptron_tagger_eng')
 
 
 stopWords = set(stopwords.words('english'))
@@ -702,6 +702,8 @@ def translate_query(sentence, db, table=""):
                 mongoProjection = mongoAggProjector(selectionList)
                 # print(mongoProjection)
                 mongoGroup = mongoClauses['GROUP BY'][0]
+                mongoProjection += f'"{mongoGroup}": "$_id", '
+                mongoProjection += '"_id": 0, '
                 # print("mongoGroup", mongoGroup)
 
                 mongoWhere = "{}"
@@ -719,7 +721,9 @@ def translate_query(sentence, db, table=""):
 
 
                 mongoOrder = ""
+                mongoOrderIn = False
                 if len(mongoClauses['ORDER BY']) != 0:
+                    mongoOrderIn = True
                     orderList = mongoClauses['ORDER BY'][0]
                     if " " in orderList:
                         orderParts = orderList.split(" ")
@@ -736,14 +740,18 @@ def translate_query(sentence, db, table=""):
                 print(mongoProjection)
                 if len(mongoClauses['HAVING']) == 0:
                     mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": "$' + mongoGroup +
-                                    '", "' + mongoAggregation + "}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
-                                    mongoHaving + "}, {\"$sort\": {" + mongoOrder + "}}])")
+                                    '", "' + mongoAggregation + "}}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
+                                    mongoHaving + "}])")
+                    if mongoOrderIn == True:
+                        mongoStatement = mongoStatement.replace("}])", "}, {\"$sort\": {" + mongoOrder + "}}])")
                 else:
                     # print("mongoGroup", mongoGroup)
                     print("mongoAggregation", mongoAggregation)
                     mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": "$' + mongoGroup +
                                 '", "' + mongoAggregation + "}}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
-                                mongoHaving + "}, {\"$sort\": {" + mongoOrder + "}}])")
+                                mongoHaving + "}])")
+                    if mongoOrderIn == True:
+                        mongoStatement = mongoStatement.replace("}])", "}, {\"$sort\": {" + mongoOrder + "}}])")
 
             elif aggStatement == True:
                 print("agg")
