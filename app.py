@@ -102,7 +102,10 @@ if user_input:
         except:
             query = 'BAD EXAMPLE QUERY'
     else:
-        query = translate_query(user_input, db=db_in)
+        try:
+            query = translate_query(user_input, db=db_in)
+        except:
+            query = 'Unable to translate query'
 
     # Print query
     response = f'Query: {query}'
