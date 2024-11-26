@@ -120,12 +120,23 @@ def example_sql(engine, table, construct=None):
         sql_fields['SELECT'] = f'{index}, {condition}'
     
     output_string = ''
+    nl_string = ''
     for s in ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY']:
         if sql_fields[s] is not None:
             output_string += f'{s} {sql_fields[s]} '
+            if s == 'SELECT':
+                nl_string += f'{s.lower()} {sql_fields[s].replace('(', ' ').replace(')', ' ').lower()}'
+            elif s == 'FROM':
+                nl_string += f' {s.lower()} {sql_fields[s]}'
+            elif s == 'WHERE':
+                nl_string += f' {s.lower()} {sql_fields[s].replace('<', 'less than').replace('>', 'greater than').replace('=', 'equals')}'
+            elif s == 'ORDER BY':
+                nl_string += f' {s.lower()} {sql_fields[s].replace('DESC', 'descending').replace('ASC', 'ascending')}'
+                    
     output_string = output_string.strip()
+    nl_string = nl_string.strip()
 
-    return output_string
+    return nl_string, output_string
 
 def example_mongo(client, table, construct=None):
     db = client['db']
@@ -139,14 +150,14 @@ def example_mongo(client, table, construct=None):
     condition = random.choice(keys)
     while condition == index:
         condition = random.choice(keys)
-    operator = random.choice(['$gt', '$lt', '$eq', '$ne', '$gte', '$lte'])
+    operator = random.choice(['$gt', '$lt', '$eq'])
     val = random.randrange(0, 11)
     direction = random.choice([-1, 1])
 
     mongo_query = {
         'MATCH': None,
         'GROUP': None,
-        'PROJECT': {index: 1},
+        'PROJECT': None,
         'SORT': None
     }
 
@@ -175,10 +186,28 @@ def example_mongo(client, table, construct=None):
     else:
         mongo_query['SORT'] = {'$sort': {sort_field: direction}}
     
-    
     pipeline = []
     for q in ['MATCH', 'GROUP', 'PROJECT', 'SORT']:
         if mongo_query[q] is not None:
             pipeline.append(mongo_query[q])
 
-    return f'db.{table}.aggregate({pipeline})'.replace("'", '"')
+    nl_string = ''
+    for q in ['PROJECT', 'MATCH', 'GROUP', 'SORT']:
+        if mongo_query[q] is not None:
+            if q == 'PROJECT':
+                d = list(mongo_query['PROJECT']['$project'].keys())
+                if '_id' not in d:
+                    d.append('_id')
+                else:
+                    for i in range(len(d)):
+                        if d[i] == '_id':
+                            d[i] = index
+                nl_string += f'select {", ".join(d)}'
+            elif q == 'MATCH':
+                nl_string += f' where {condition} {operator} {val}'.replace('$lt', 'less than').replace('$gt', 'greater than').replace('$eq', 'equals')
+            elif q == 'GROUP':
+                nl_string += f' group by {index}'
+            elif q == 'SORT':
+                nl_string += f' sort by {sort_field} {direction}'.replace('-1', 'descending').replace('1', 'ascending')
+
+    return nl_string, f'db.{table}.aggregate({pipeline})'.replace("'", '"')
