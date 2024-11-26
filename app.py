@@ -91,7 +91,6 @@ if user_input:
                     query = example_sql(engine=sql_engine, table=table)
                 else:
                     query = example_mongo(client=mongo_client, table=table)
-                    pass
             else:
                 construct = re.findall("example query with (.+) from", user_input)[0]
                 construct = construct.upper().strip()
