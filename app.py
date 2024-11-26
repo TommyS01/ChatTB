@@ -88,16 +88,20 @@ if user_input:
             table = re.findall('from (.+)', user_input)[0]
             if 'with ' not in user_input:
                 if db_in == '':
-                    query = example_sql(engine=sql_engine, table=table)
+                    string, query = example_sql(engine=sql_engine, table=table)
                 else:
-                    query = example_mongo(client=mongo_client, table=table)
+                    string, query = example_mongo(client=mongo_client, table=table)
             else:
                 construct = re.findall("example query with (.+) from", user_input)[0]
                 construct = construct.upper().strip()
                 if db_in == '':
-                    query = example_sql(engine=sql_engine, table=table, construct=construct)
+                    string, query = example_sql(engine=sql_engine, table=table, construct=construct)
                 else:
-                    query = example_mongo(client=mongo_client, table=table, construct=construct)
+                    string, query = example_mongo(client=mongo_client, table=table, construct=construct)
+            response = f'Nat. Language Query: {string}'
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            with st.chat_message('assistant'):
+                st.text(response)
         except:
             query = 'BAD EXAMPLE QUERY'
     else:
