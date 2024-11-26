@@ -933,24 +933,24 @@ def translate_query(sentence, db, table=""):
                 if len(mongoClauses['ORDER BY']) != 0:
                     # print(mongoClauses['ORDER BY'][0])
                     statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {\"from\": \"" + joinParts[0] + "\", \"localField\": \"" + \
-                            filteredClauses[2][0] + "\", \"foreignField\": \"" + filteredClauses[2][-1] + "\", \"as\": \"foreignTable\"}}, {\"$match\": " + \
-                            mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}, {\"$sort\": {" + mongoOrder + "}}])"
+                            filteredClauses[2][0] + "\", \"foreignField\": \"" + filteredClauses[2][-1] + "\", \"as\": \"foreignTable\"}}, {\"$unwind\":" + "$foreignTable" + "}, {\"$match\": " + \
+                            mongoWhere + "}, {\"$sort\": {" + mongoOrder + "}}])"
                 else:
                     print("where no order")
                     statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {\"from\": \"" + joinParts[0] + "\", \"localField\": \"" + \
-                                filteredClauses[2][0] + "\", \"foreignField\": \"" + filteredClauses[2][-1] + "\", \"as\": \"foreignTable\"}}, {\"$match\": " + \
-                                mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}])"
+                                filteredClauses[2][0] + "\", \"foreignField\": \"" + filteredClauses[2][-1] + "\", \"as\": \"foreignTable\"}}, {\"$unwind\":" + "$foreignTable" + "}, {\"$match\": " + \
+                                mongoWhere + "}])"
             else:
                 if len(mongoClauses['ORDER BY']) != 0:
                     print("just order")
                     statement = "db." + mongoTable + '.aggregate([{\"$lookup\": {\"from\": "' + joinParts[0] + '", \"localField\": "' + \
-                                filteredClauses[2][0] + '", \"foreignField\": "' + filteredClauses[2][-1] + '", \"as\": "foreignTable"}}, ' + \
-                                '{\"$project\": {' + mongoProjection + '}}, {\"$sort\": {' + mongoOrder + '}}])'
+                                filteredClauses[2][0] + '", \"foreignField\": "' + filteredClauses[2][-1] + '", \"as\": "foreignTable"}}, {\"$unwind\":' + '"$foreignTable"},' + \
+                                ' {\"$sort\": {' + mongoOrder + '}}])'
                 else:
                     print("no where or order")
                     statement = "db." + mongoTable + '.aggregate([{\"$lookup\": {\"from\": "' + joinParts[0] + '", \"localField\": "' + \
-                                filteredClauses[2][0] + '", \"foreignField\": "' + filteredClauses[2][-1] + '", \"as\": "foreignTable"}}, ' + \
-                                '{\"$project\": {' + mongoProjection + '}}])'
+                                filteredClauses[2][0] + '", \"foreignField\": "' + filteredClauses[2][-1] + '", \"as\": "foreignTable"}}, {\"$unwind\":' + '"$foreignTable"}' + \
+                                '])'
         return statement
 
 
