@@ -83,9 +83,8 @@ if user_input:
     # Set correct db type
     db_in = 'mongo' if db == 'MongoDB' else ''
 
-    # TODO: Check if example query
-    try:
-        if "example query" in user_input:
+    if "example query" in user_input:
+        try:
             table = re.findall('from (.+)', user_input)[0]
             if 'with ' not in user_input:
                 if db_in == '':
@@ -100,10 +99,10 @@ if user_input:
                     query = example_sql(engine=sql_engine, table=table, construct=construct)
                 else:
                     query = example_mongo(client=mongo_client, table=table, construct=construct)
-        else:
-            query = translate_query(user_input, db=db_in)
-    except:
-        query = 'BAD EXAMPLE QUERY'
+        except:
+            query = 'BAD EXAMPLE QUERY'
+    else:
+        query = translate_query(user_input, db=db_in)
 
     # Print query
     response = f'Query: {query}'
