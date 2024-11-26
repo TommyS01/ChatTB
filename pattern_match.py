@@ -836,11 +836,11 @@ def translate_query(sentence, db, table=""):
                         orderParts = orderList.split(" ")
                         # print(orderParts)
                         if orderParts[1] == "ASC":
-                            mongoOrder = ".sort({ " + orderParts[0] + ": 1})"
+                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": 1})"
                         else:
-                            mongoOrder = ".sort({ " + orderParts[0] + ": -1})"
+                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": -1})"
                     else:
-                        mongoOrder = ".sort({ " + mongoClauses['ORDER BY'][0] + ": 1})"
+                        mongoOrder = ".sort({ \"" + mongoClauses['ORDER BY'][0] + "\": 1})"
 
                     print(mongoOrder)
 
