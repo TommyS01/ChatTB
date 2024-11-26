@@ -61,7 +61,7 @@ def execute_mongo(statement, client):
             results = client['db'][collection_name].find(q, p).sort(json.loads(sort[0]))
     else:
         pipeline = json.loads(query)
-        results =client['db'][collection_name].aggregate(pipeline)
+        results = client['db'][collection_name].aggregate(pipeline)
     
     for doc in results:
         if doc != {}:
@@ -90,7 +90,6 @@ def example_sql(engine, table, construct=None):
         'FROM': table,
         'WHERE': None,
         'GROUP BY': None,
-        #'HAVING': None,
         'ORDER BY': None
     }
     index = random.choice(all_cols)

@@ -201,7 +201,7 @@ def translate_query(sentence, db, table=""):
                 if selection[:4] == "max(" or selection[:4] == "min(" or selection[:4] == "sum(" or selection[:4] == "avg(" or selection[:6] == "count(":
                     selection = mongoAggConverter(selection)
                 mongoSelections += '"' + selection + '": 1, '
-            mongoSelections += '"_id": 0'
+
         else:
             mongoSelections = ''
         return mongoSelections
@@ -229,36 +229,41 @@ def translate_query(sentence, db, table=""):
             # print(selection+ 'asdfasdfasd')
             selectionAggList = selection[:-1].split("(")
             # print(selectionAggList)
-            aggSelection = 'max' + selectionAggList[1] + '": {"$max": "$' + selectionAggList[1] + '"}'
+            aggSelection = 'max' + selectionAggList[1] + '": {$max: "$' + selectionAggList[1] + '"}'
         elif selection[:4] == "min(":
             # print(selection)
             selectionAggList = selection[:-1].split("(")
             # print(selectionAggList)
-            aggSelection = 'min' + selectionAggList[1] + '": {"$min": "$' + selectionAggList[1] + '"}'
+            aggSelection = 'min' + selectionAggList[1] + '": {$min: "$' + selectionAggList[1] + '"}'
         elif selection[:4] == "sum(":
             # print(selection)
             selectionAggList = selection[:-1].split("(")
             # print(selectionAggList)
-            aggSelection = 'sum' + selectionAggList[1] + '": {"sum": "$' + selectionAggList[1] + '"}'
+            aggSelection = 'sum' + selectionAggList[1] + '": {$sum: "$' + selectionAggList[1] + '"}'
         elif selection[:4] == "avg(":
             # print(selection)
             selectionAggList = selection[:-1].split("(")
             # print(selectionAggList)
-            aggSelection = 'avg' + selectionAggList[1] + '": {"avg": "$' + selectionAggList[1] + '"}'
+            aggSelection = 'avg' + selectionAggList[1] + '": {$avg: "$' + selectionAggList[1] + '"}'
         elif selection[:6] == "count(":
             # print(selection)
             selectionAggList = selection[:-1].split("(")
             # print(selectionAggList)
-            aggSelection = 'count' + selectionAggList[1] + '": {"sum": 1}'
+            aggSelection = 'count' + selectionAggList[1] + '": {$sum: 1}'
         return aggSelection
 
     def mongoAgger(selectionList):
         for select in selectionList:
-
+            if " AS agg" in select:
+                selectAbbr = select.split(" AS agg")[0]
+                print("selectAbbr", selectAbbr)
+                select = selectAbbr
+                print(select)
+            # print("select", select)
             if select[:3] in aggList:
                 # print(select + 'asdfagg')
                 groupAgg = mongoAggConverter(select)
-                # print(groupAgg)
+                print(groupAgg)
             # else:
 
         # print(groupAgg)
@@ -347,6 +352,7 @@ def translate_query(sentence, db, table=""):
         if i == "order":
             orderIn = True
 
+    # print("tokens:", tokens)
     if "join" not in tokens:
         if orderIn == False:
             if len(filteredClauses) == 1:
@@ -490,6 +496,7 @@ def translate_query(sentence, db, table=""):
                                         " AND " + targets[-1] + " " + comparison4 + " " + numbers[3])
                 else: # just having
                     if len(comparisons) == 1: # only one having condition
+                        # print("ssdfsfdas")
                         comparison = comparisonConverter(comparisons[0])
                         statement = ("SELECT " + selections + " AS agg FROM " + table + " GROUP BY " + filteredClauses[2][0] + " HAVING " +
                                         filteredClauses[-1][0] + " " + comparison + " " + numbers[0] )
@@ -559,6 +566,7 @@ def translate_query(sentence, db, table=""):
                 if "group" in targets:
                     if "where" not in tokens:
                         if len(comparisons) == 1:
+                            # print("here")
                             comparison1 = comparisonConverter(comparisons[0])
                             statement = ("SELECT " + selections + " FROM " + table + " GROUP BY " + filteredClauses[3][0] +
                                         " HAVING " + filteredClauses[-2][0] + " " + comparison1 + " " + numbers[0] + " ORDER BY " +
@@ -624,7 +632,7 @@ def translate_query(sentence, db, table=""):
                         if len(comparisons) == 2: # one where and one having
                             comparison1 = comparisonConverter(comparisons[0])
                             comparison2 = comparisonConverter(comparisons[-1])
-
+                            # print("hasdfasdf")
                             statement = ("SELECT " + selections + " FROM " + table + " WHERE " + filteredClauses[2][0] + " " +
                                         comparison1 + " " + numbers[0] + " GROUP BY " + filteredClauses[3][0] +
                                         " HAVING " + filteredClauses[-2][0] + " " + comparison2 + " " + numbers[1] +
@@ -689,10 +697,12 @@ def translate_query(sentence, db, table=""):
 
                 selectionList = mongoClauses['SELECT']
                 mongoAggregation = mongoAgger(selectionList)
-                # print("jeer")
+                mongoAggProj = mongoAggregation.split('"')[0]
+                print("mongoAggProj", mongoAggProj)
                 mongoProjection = mongoAggProjector(selectionList)
                 # print(mongoProjection)
                 mongoGroup = mongoClauses['GROUP BY'][0]
+                # print("mongoGroup", mongoGroup)
 
                 mongoWhere = "{}"
                 if len(mongoClauses['WHERE']) != 0:
@@ -703,8 +713,10 @@ def translate_query(sentence, db, table=""):
                 mongoHaving = "{}"
                 if len(mongoClauses['HAVING']) != 0:
                     havingList = mongoClauses['HAVING']
+                    # print(havingList[0])
                     mongoHaving = mongoWherer(havingList[0])
                     print(mongoHaving)
+
 
                 mongoOrder = ""
                 if len(mongoClauses['ORDER BY']) != 0:
@@ -713,15 +725,25 @@ def translate_query(sentence, db, table=""):
                         orderParts = orderList.split(" ")
                         # print(orderParts)
                         if orderParts[1] == "ASC":
-                            mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
+                            mongoOrder = orderParts[0] + ": 1"
                         else:
-                            mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                            mongoOrder = orderParts[0] + ": -1"
                     else:
-                        mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
+                        mongoOrder = mongoClauses['ORDER BY'][0] + ": 1"
 
-                mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": "$' + mongoGroup +
-                                '", "' + mongoAggregation + "}}, {\"$project\": {" + mongoProjection + "}}, {\"$match\": " +
-                                mongoHaving + "}, {\"$sort\": {" + mongoOrder + "}}])")
+                tempAggProj = mongoAggregation.split('"')[0]
+                mongoProjection = mongoProjection + ' "' + tempAggProj + '": 1'
+                print(mongoProjection)
+                if len(mongoClauses['HAVING']) == 0:
+                    mongoStatement = ("db." + mongoTable + ".aggregate([{$match: " + mongoWhere + '}, {$group: {_id: "$' + mongoGroup +
+                                    '", "' + mongoAggregation + "}, {$project: {" + mongoProjection + "}}, {$match: " +
+                                    mongoHaving + "}, {$sort: {" + mongoOrder + "}}])")
+                else:
+                    # print("mongoGroup", mongoGroup)
+                    print("mongoAggregation", mongoAggregation)
+                    mongoStatement = ("db." + mongoTable + ".aggregate([{$match: " + mongoWhere + '}, {$group: {_id: "$' + mongoGroup +
+                                '", "' + mongoAggregation + "}}, {$project: {" + mongoProjection + "}}, {$match: " +
+                                mongoHaving + "}, {$sort: {" + mongoOrder + "}}])")
 
             elif aggStatement == True:
                 print("agg")
@@ -729,7 +751,17 @@ def translate_query(sentence, db, table=""):
                 selectionList = mongoClauses['SELECT']
                 mongoAggregation = mongoAgger(selectionList)
                 # print("jeer")
+                mongoAggProj = mongoAggregation.split('"')[0]
+                print("mongoAggProj", mongoAggProj)
+                # print(selectionList)
                 mongoProjection = mongoAggProjector(selectionList)
+                aggIn = False
+                for item in aggList:
+                    # print(item)
+                    if item in tokens:
+                        print(item)
+                        aggIn = True
+
                 # print(mongoProjection)
 
                 mongoWhere = ""
@@ -745,28 +777,33 @@ def translate_query(sentence, db, table=""):
                         orderParts = orderList.split(" ")
                         # print(orderParts)
                         if orderParts[1] == "ASC":
-                            mongoOrder = '\"' + orderParts[0] + '\"' + ": 1"
+                            mongoOrder = orderParts[0] + ": 1"
                         else:
-                            mongoOrder = '\"' + orderParts[0] + '\"' + ": -1"
+                            mongoOrder = orderParts[0] + ": -1"
                     else:
-                        mongoOrder = '\"' + mongoClauses['ORDER BY'][0] + '\"' + ": 1"
+                        mongoOrder = mongoClauses['ORDER BY'][0] + ": 1"
 
                     # print(mongoOrder)
 
+
                 if mongoWhere != "":
                     if mongoOrder != "":
-                        mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id": null, "' +
-                                            mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
+                        print("hererererer")
+                        mongoStatement = ("db." + mongoTable + ".aggregate([{$match: " + mongoWhere + '}, {$group: {_id: null, "' +
+                                            mongoAggregation + '}, {$project: { "_id": 0, "' + mongoAggProj  + '": 1}}, {$sort: {' + mongoOrder + "}}])")
                     else:
-                        mongoStatement = ("db." + mongoTable + ".aggregate([{\"$match\": " + mongoWhere + '}, {\"$group\": {\"_id\": null, "' +
-                                            mongoAggregation + "}}, {\"$project\": {" + mongoProjection  + "}}])")
+                        print("hererererer2")
+                        mongoStatement = ("db." + mongoTable + ".aggregate([{$match: " + mongoWhere + '}, {$group: {_id: null, "' +
+                                            mongoAggregation + '}}, {$project: { "_id": 0, "' + mongoAggProj  + '": 1}}])')
                 else:
                     if mongoOrder != "":
-                        mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
-                                        "}}, {\"$project\": {" + mongoProjection  + "}}, {\"$sort\": {" + mongoOrder + "}}])")
+                        print("hererererer3")
+                        mongoStatement = ("db." + mongoTable + '.aggregate([{$group: {_id: null, "' + mongoAggregation +
+                                        '}}, {$project: { "_id": 0, "' + mongoAggProj  + '": 1}}, {$sort: {" + mongoOrder + "}}])')
                     else:
-                        mongoStatement = ("db." + mongoTable + '.aggregate([{\"$group\": {\"_id\": null, "' + mongoAggregation +
-                                        "}}, {\"$project\": {" + mongoProjection  + "}}])")
+                        print(mongoProjection)
+                        mongoStatement = ("db." + mongoTable + '.aggregate([{$group: {_id: null, "' + mongoAggregation +
+                                        '}}, {$project: { "_id": 0, "' + mongoAggProj  + '": 1}}])')
 
             else:
                 print("no group and no agg")
@@ -791,16 +828,15 @@ def translate_query(sentence, db, table=""):
                         orderParts = orderList.split(" ")
                         # print(orderParts)
                         if orderParts[1] == "ASC":
-                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": 1})"
+                            mongoOrder = ".sort({ " + orderParts[0] + ": 1})"
                         else:
-                            mongoOrder = ".sort({ \"" + orderParts[0] + "\": -1})"
+                            mongoOrder = ".sort({ " + orderParts[0] + ": -1})"
                     else:
-                        mongoOrder = ".sort({ \"" + mongoClauses['ORDER BY'][0] + "\": 1})"
+                        mongoOrder = ".sort({ " + mongoClauses['ORDER BY'][0] + ": 1})"
 
                     print(mongoOrder)
-                if mongoWhere == "":
-                    mongoWhere = "{}"
-                mongoStatement = "db." + mongoTable + ".find(" + mongoWhere + ", {" + mongoProjection + "})" + mongoOrder
+
+                mongoStatement = "db." + mongoTable + ".find({" + mongoWhere + "}, {" + mongoProjection + "})" + mongoOrder
 
             print(mongoClauses)
             return mongoStatement
@@ -884,23 +920,31 @@ def translate_query(sentence, db, table=""):
                 # print(mongoClauses['WHERE'][0])
                 if len(mongoClauses['ORDER BY']) != 0:
                     # print(mongoClauses['ORDER BY'][0])
-                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
-                            filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {\"$match\": " + \
-                            mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}, {\"$sort\": {" + mongoOrder + "}}])"
+                    statement = "db." + mongoTable + ".aggregate([{$lookup: {from: '" + joinParts[0] + "', localField: '" + \
+                            filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {$match: " + \
+                            mongoWhere + "}, {$project: {" + mongoProjection + "}}, {$sort: {" + mongoOrder + "}}])"
                 else:
                     print("where no order")
-                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
-                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {\"$match\": " + \
-                                mongoWhere + "}, {\"$project\": {" + mongoProjection + "}}])"
+                    statement = "db." + mongoTable + ".aggregate([{$lookup: {from: '" + joinParts[0] + "', localField: '" + \
+                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, {$match: " + \
+                                mongoWhere + "}, {$project: {" + mongoProjection + "}}])"
             else:
                 if len(mongoClauses['ORDER BY']) != 0:
                     print("just order")
-                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
-                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, " + \
-                                "{\"$project\": {" + mongoProjection + "}}, {\"$sort\": {" + mongoOrder + "}}])"
+                    statement = "db." + mongoTable + '.aggregate([{$lookup: {from: "' + joinParts[0] + '", localField: "' + \
+                                filteredClauses[2][0] + '", foreignField: "' + filteredClauses[2][-1] + '", as: "foreignTable"}}, ' + \
+                                '{$project: {' + mongoProjection + '}}, {$sort: {' + mongoOrder + '}}])'
                 else:
                     print("no where or order")
-                    statement = "db." + mongoTable + ".aggregate([{\"$lookup\": {from: '" + joinParts[0] + "', localField: '" + \
-                                filteredClauses[2][0] + "', foreignField: '" + filteredClauses[2][-1] + "', as: 'foreignTable'}}, " + \
-                                "{\"$project\": {" + mongoProjection + "}}])"
+                    statement = "db." + mongoTable + '.aggregate([{$lookup: {from: "' + joinParts[0] + '", localField: "' + \
+                                filteredClauses[2][0] + '", foreignField: "' + filteredClauses[2][-1] + '", as: "foreignTable"}}, ' + \
+                                '{$project: {' + mongoProjection + '}}])'
         return statement
+
+
+# while True:
+#     sentence = input("enter query: ")
+
+#     statement = translate_query(sentence, db)
+
+#     print(statement)
