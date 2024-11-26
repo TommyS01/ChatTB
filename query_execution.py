@@ -211,3 +211,15 @@ def example_mongo(client, table, construct=None):
                 nl_string += f' sort by {sort_field} {direction}'.replace('-1', 'descending').replace('1', 'ascending')
 
     return nl_string, f'db.{table}.aggregate({pipeline})'.replace("'", '"')
+
+def make_columns_unique(columns):
+    seen = {}
+    new_columns = []
+    for col in columns:
+        if col in seen:
+            seen[col] += 1
+            new_columns.append(f"{col}_{seen[col]}")
+        else:
+            seen[col] = 0
+            new_columns.append(col)
+    return new_columns

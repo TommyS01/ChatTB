@@ -133,6 +133,7 @@ if user_input:
     
     with st.chat_message('assistant'):
         if isinstance(response, pd.DataFrame):
+            response.columns = make_columns_unique(response.columns)
             st.table(response)
         elif isinstance(response, list):
             for m in response:
