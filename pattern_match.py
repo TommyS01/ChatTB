@@ -845,7 +845,7 @@ def translate_query(sentence, db, table=""):
 
                     print(mongoOrder)
 
-                mongoStatement = "db." + mongoTable + ".find({" + mongoWhere + "}, {" + mongoProjection + "})" + mongoOrder
+                mongoStatement = "db." + mongoTable + ".find(" + mongoWhere + ", {" + mongoProjection + "})" + mongoOrder
 
             print(mongoClauses)
             return mongoStatement
